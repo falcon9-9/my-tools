@@ -1,0 +1,26 @@
+{
+  "name": "babel-plugin-check-my-code",
+  "version": "1.0.0",
+  "description": "A Babel plugin for managing personal TODO comments",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "babel src -d dist",
+    "test-plugin": "node test/run-tests.js"
+  },
+  "keywords": [
+    "babel-plugin",
+    "todo",
+    "code-review"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@babel/core": "^7.x.x"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.x.x",
+    "@babel/preset-env": "^7.x.x",
+    "jest": "^29.x.x"
+  }
+} 
