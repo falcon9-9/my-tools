@@ -106,25 +106,6 @@ This will:
 2. Process it with the plugin
 3. Display the detected comments and generated report
 
-### 2. Debug Mode
-
-For detailed debugging of the plugin's operation:
-
-```bash
-npm run debug-plugin
-```
-
-This runs the plugin with detailed logging to help troubleshoot any issues.
-
-### 3. Automated Tests with Jest
-
-The plugin comes with a suite of automated tests using Jest:
-
-```bash
-npm test
-```
-
-This will run all tests in the `test` directory and report any failures.
 
 ### 4. Testing in Your Own Project
 
@@ -172,75 +153,151 @@ babel path/to/your/file.js --plugins=./src/index.js
 
 This will transform the file using the plugin and generate the report in the `reports` directory.
 
-### 6. Testing Edge Cases
+## 使用方式
 
-To test the plugin's handling of various edge cases:
+### 1. 使用 Webpack
 
+如果你的项目使用 Webpack，推荐在 webpack 配置中集成插件：
+
+1. 安装必要依赖：
 ```bash
-npm run test-edge-cases
+npm install --save-dev babel-loader @babel/core
 ```
 
-This tests the plugin with:
-- Comments with multiple markers
-- Empty comment content
-- Multi-line block comments
-- Special characters
-- Unicode content
-- Very long comments
-- HTML content in comments
-- and more
-
-This helps ensure the plugin is robust and handles unusual inputs correctly.
-
-## Comment Types and Patterns
-
-The plugin recognizes three types of comments:
-
-1. **Test comments** (high priority):
-   ```javascript
-   // @check-my-code test This needs to be tested
-   ```
-
-2. **Check comments** (medium priority):
-   ```javascript
-   // @check-my-code check Verify this calculation
-   ```
-
-3. **Remove comments** (low priority):
-   ```javascript
-   // @check-my-code remove Remove in production
-   ```
-
-You can customize these patterns in the plugin configuration.
-
-## Plugin Configuration
-
-The plugin accepts the following configuration options:
-
-- `outputDir`: Directory where reports will be saved
-- `patterns`: Custom patterns for different comment types
-  - `test`: Pattern for test comments (high priority)
-  - `check`: Pattern for check comments (medium priority)
-  - `remove`: Pattern for remove comments (low priority)
-- `projectRoot`: Root directory of your project (defaults to `process.cwd()`)
-
-Example configuration:
-
+2. 在 webpack.config.js 中配置：
 ```javascript
+module.exports = {
+  // ... 其他配置
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            plugins: [
+              ['babel-plugin-check-my-code', {
+                outputDir: './reports',
+                patterns: {
+                  high: ['test'],
+                  medium: ['check'],
+                  low: ['remove']
+                },
+                editorConfig: {
+                  editor: 'cursor',
+                  pathStyle: 'encoded'
+                }
+              }]
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+3. 使用 webpack watch 模式：
+```bash
+webpack --watch
+```
+
+### 2. 使用 Babel CLI
+
+如果你想独立使用 Babel 处理文件：
+
+```bash
+# 安装依赖
+npm install --save-dev @babel/cli
+
+# 编译单个文件
+npx babel src/your-file.js
+
+# 编译整个目录
+npx babel src -d dist
+
+# 使用 watch 模式
+npx babel src -d dist --watch
+```
+
+## 开发模式使用（npm link）
+
+如果你正在开发这个插件，或者想在本地项目中测试/使用这个插件，可以使用 npm link：
+
+### 1. 在插件项目中创建链接
+
+```bash
+# 进入插件项目目录
+cd check-my-code
+
+# 创建全局链接
+npm link
+```
+
+### 2. 在目标项目中使用插件
+
+```bash
+# 进入要使用该插件的项目目录
+cd 你的项目路径
+
+# 链接插件
+npm link babel-plugin-check-my-code
+```
+
+### 3. 配置目标项目
+
+在目标项目的 `.babelrc` 或 `babel.config.js` 中添加插件配置：
+
+```json
 {
   "plugins": [
-    ["check-my-code", {
-      "outputDir": "./custom-reports",
+    ["babel-plugin-check-my-code", {
+      "outputDir": "./reports",
       "patterns": {
-        "test": "@todo test",
-        "check": "@todo check",
-        "remove": "@todo remove"
+        "high": ["test"],
+        "medium": ["check"],
+        "low": ["remove"]
+      },
+      "editorConfig": {
+        "editor": "cursor",
+        "pathStyle": "encoded"
       }
     }]
   ]
 }
 ```
 
-## License
+### 4. 解除链接
 
-MIT 
+当你不再需要本地开发版本时，可以解除链接：
+
+```bash
+# 在目标项目中解除链接
+npm unlink babel-plugin-check-my-code
+
+# 在插件项目中解除全局链接
+npm unlink
+```
+
+### 开发调试提示
+
+1. **检查链接状态**：
+```bash
+# 检查全局链接
+npm ls -g --depth=0
+# 检查本地链接
+npm ls --link=true
+```
+
+2. **验证插件加载**：
+```bash
+# 查看 Babel 配置是否正确加载插件
+npx babel --print-config-file src/your-file.js
+```
+
+3. **调试输出**：
+插件中已包含基本的日志输出，如果需要更多调试信息，可以添加环境变量：
+```bash
+DEBUG=babel-plugin-check-my-code* npm run your-script
+```
