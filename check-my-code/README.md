@@ -301,3 +301,45 @@ npx babel --print-config-file src/your-file.js
 ```bash
 DEBUG=babel-plugin-check-my-code* npm run your-script
 ```
+
+
+这些改动解决了覆盖问题。主要改进包括：
+新增功能:
+readExistingReport: 读取已存在的JSON报告
+mergeTodos: 合并新旧todos，使用文件路径和行号作为唯一标识
+改进的数据处理:
+在生成新报告前先读取现有报告
+合并现有和新的todos
+添加更新时间戳
+保持todo的唯一性（同一文件同一行只保留最新的）
+元数据增强:
+添加了lastUpdatedAt字段
+统计数据现在基于合并后的todos
+这样修改后，插件将：
+保留所有文件中的@check-my-code注释
+避免重复记录
+在每次运行时更新而不是覆盖现有数据
+使用建议：
+建议定期运行插件以确保报告更新
+如果需要完全重置报告，可以手动删除输出目录中的文件
+可以通过检查metadata.lastUpdatedAt来追踪最近的更新时间
+这样的改进使得插件更适合在大型项目中使用，可以持续累积和管理所有的代码检查注释。
+
+
+我已经添加了对 Vue 文件的特殊处理。这个改进包括：
+新增 calculateVueFileLine 函数:
+检查文件是否为 .vue 文件
+读取文件内容并按行分割
+查找 <script> 标签的位置
+计算实际行号（script标签位置 + Babel提供的行号）
+修改行号处理逻辑:
+在添加 todo 之前计算实际行号
+在生成编辑器链接时使用实际行号
+这个解决方案的工作原理：
+对于普通文件（非 .vue）:
+保持原有行号不变
+直接使用 Babel 提供的行号
+对于 Vue 文件:
+找到 <script> 标签的位置
+将 Babel 提供的行号（相对于 script 部分的行号）加上 script 标签的位置
+得到在整个文件中的实际行号
