@@ -343,3 +343,6 @@ mergeTodos: 合并新旧todos，使用文件路径和行号作为唯一标识
 找到 <script> 标签的位置
 将 Babel 提供的行号（相对于 script 部分的行号）加上 script 标签的位置
 得到在整个文件中的实际行号
+
+
+研究什么命令能直接作用 babel-plugin-check-my-code
