@@ -99,3 +99,5 @@ node babel-check.js
 - 确保已安装必要的依赖：`@babel/core` 和 `@babel/preset-env`
 - 如果脚本报错找不到插件，检查 npm link 是否正确配置
 - 可根据需要调整目标目录路径 `targetDir`
+
+使用 Markdown Preview Enhanced 插件打开report.md, 无法跳转链接。

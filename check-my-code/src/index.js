@@ -406,7 +406,17 @@ module.exports = function checkMyCodePlugin(babel) {
 
           // 为该文件生成一个单独的报告
           try {
+            // 如果没有todos，跳过报告生成
+            if (!this.todos || this.todos.length === 0) {
+              console.log(`[${this.currentFileId}] 没有发现todos，跳过报告生成: ${path.basename(filename)}`);
+              return;
+            }
+
             const fileBasename = path.basename(filename, path.extname(filename));
+            // 获取相对路径并替换路径分隔符为@
+            const relativePath = path.relative(process.cwd(), filename)
+              .replace(/\\/g, '@')
+              .replace(/\//g, '@');
             const fileReport = {
               metadata: {
                 generatedAt: new Date().toISOString(),
@@ -420,8 +430,8 @@ module.exports = function checkMyCodePlugin(babel) {
             const tempDir = path.join(this.outputDir, 'temp');
             ensureDir(tempDir);
 
-            // 生成每个文件的单独报告
-            const fileReportPath = path.join(tempDir, `file-${fileBasename}.json`);
+            // 生成每个文件的单独报告，使用相对路径确保唯一性
+            const fileReportPath = path.join(tempDir, `file-${relativePath}.json`);
             fs.writeFileSync(fileReportPath, JSON.stringify(fileReport, null, 2));
             console.log(`[${this.currentFileId}] 写入文件报告: ${fileReportPath}`);
 
