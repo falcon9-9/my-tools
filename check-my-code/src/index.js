@@ -342,7 +342,47 @@ module.exports = function checkMyCodePlugin(babel) {
           //   hasFileOpts: !!(state.file && state.file.opts),
           //   fileOptsFilename: state.file && state.file.opts && state.file.opts.filename
           // });
+          // 安全获取文件名 - 这里尝试从state中获取，应该比pre阶段更可靠
+          const actualFilename = state.filename || (state.file && state.file.opts && state.file.opts.filename);
+          // 检查全局变量
+          const globalFileName = typeof global !== 'undefined' && global.CURRENT_PROCESSING_FILE;
+          if (globalFileName && (!this.filename || this.filename === 'unknown-file')) {
+            this.filename = globalFileName;
+            console.log(`[${this.currentFileId}] EXIT: 从全局变量更新文件名: ${this.filename}`);
+          }
+
+          // 如果pre阶段没有获取到文件名，但这里获取到了，就更新文件名
+          if (actualFilename && (!this.filename || this.filename === 'unknown-file')) {
+            this.filename = actualFilename;
+            console.log(`[${this.currentFileId}] 更新文件名: ${this.filename}`);
+          }
+
+          // 尝试从配置选项中再次获取文件名
+          if (state.opts && state.opts.currentFilename && (!this.filename || this.filename === 'unknown-file')) {
+            this.filename = state.opts.currentFilename;
+            console.log(`[${this.currentFileId}] 从选项中更新文件名: ${this.filename}`);
+          }
+
+          // 获取文件名用于日志，如果仍然无法获取，使用命令行参数
           let filename = this.filename;
+          if (!filename || filename === 'unknown-file') {
+            // 最后尝试从process.argv中获取
+            const args = process.argv.slice(2);
+            for (const arg of args) {
+              if (arg.endsWith('.vue') || arg.endsWith('.js')) {
+                filename = arg;
+                this.filename = filename;
+                console.log(`[${this.currentFileId}] 从命令行参数中提取文件名: ${filename}`);
+                break;
+              }
+            }
+          }
+          
+          // 这时如果依然没有filename，使用这个文件ID作为唯一标识
+          if (!filename || filename === 'unknown-file') {
+            filename = `unknown-file-${this.currentFileId}`;
+            this.filename = filename;
+          }
           // 如果是Vue文件且尚未处理
           if (filename.endsWith('.vue')) {
             try {
