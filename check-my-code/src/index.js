@@ -13,8 +13,47 @@ const DEFAULT_CONFIG = {
   // 添加编辑器配置
   editorConfig: {
     editor: 'vscode',    // 编辑器类型: 'vscode' | 'cursor'
-  }
+  },
+  runMode: 'watch'  // 'watch' | 'check'
 };
+
+/**
+ * 深度合并配置对象
+ * @param {Object} target - 目标对象
+ * @param {Object} source - 源对象
+ * @returns {Object} - 合并后的对象
+ */
+function deepMerge(target, source) {
+  const result = { ...target };
+  
+  for (const key in source) {
+    if (source[key] instanceof Object && key in target) {
+      result[key] = deepMerge(target[key], source[key]);
+    } else if (source[key] !== undefined) {
+      result[key] = source[key];
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * 合并用户配置和默认配置
+ * @param {Object} userOpts - 用户提供的配置选项
+ * @returns {Object} - 合并后的配置
+ */
+function mergeConfig(userOpts = {}) {
+  // 处理环境变量优先级
+  const envConfig = {
+    runMode: process.env.CHECK_MY_CODE_MODE
+  };
+
+  // 首先合并默认配置和用户配置
+  const mergedConfig = deepMerge(DEFAULT_CONFIG, userOpts);
+  
+  // 然后应用环境变量（如果存在）
+  return deepMerge(mergedConfig, envConfig);
+}
 
 // 确保目录存在
 function ensureDir(dir) {
@@ -161,8 +200,11 @@ function parseVueFile(filename) {
 }
 
 // 生成汇总报告
-function generateSummaryReport(outputDir, patterns, currentFileId) {
+function generateSummaryReport(outputDir, patterns, currentFileId, processedFiles) {
   try {
+    // Clean up reports for deleted files first
+    cleanupDeletedFiles(outputDir, processedFiles);
+    
     // 设置临时目录路径
     const tempDir = path.join(outputDir, 'temp');
 
@@ -268,9 +310,14 @@ module.exports = function checkMyCodePlugin(babel) {
 
   // 当前正在处理的文件计数
   let fileCounter = 0;
+  // Create the Set at the plugin level so it persists across all files
+  const processedFiles = new Set();
 
   return {
     pre(state) {
+      // 合并配置
+      this.config = mergeConfig(state.opts);
+      
       // 获取一个唯一的文件标识符，用于日志
       fileCounter++;
       this.currentFileId = fileCounter;
@@ -310,14 +357,14 @@ module.exports = function checkMyCodePlugin(babel) {
       console.log(`[${this.currentFileId}] 处理文件开始: ${possibleFilename || 'unknown-file'}`);
 
       // 获取项目根目录
-      const projectRoot = state.opts.projectRoot || process.cwd();
+      const projectRoot = process.cwd();
 
       // 获取目录最后一部分名称作为输出目录名
       const dirName = getLastDirectoryName(projectRoot);
 
       // 设置输出目录
       this.outputDir = path.join(
-        state.opts.outputDir || DEFAULT_CONFIG.outputDir,
+        this.config.outputDir,
         dirName
       );
 
@@ -325,10 +372,10 @@ module.exports = function checkMyCodePlugin(babel) {
       ensureDir(this.outputDir);
 
       // 设置编辑器链接配置
-      this.editorLinkConfig = state.opts.editorLink || DEFAULT_CONFIG.editorConfig;
+      this.editorLinkConfig = this.config.editorConfig;
 
       // 设置模式匹配
-      this.patterns = state.opts.patterns || DEFAULT_CONFIG.patterns;
+      this.patterns = this.config.patterns;
     },
 
     visitor: {
@@ -383,6 +430,13 @@ module.exports = function checkMyCodePlugin(babel) {
             filename = `unknown-file-${this.currentFileId}`;
             this.filename = filename;
           }
+
+          // Now add to processed files if we have a valid filename
+          if (this.filename && this.filename !== 'unknown-file') {
+            processedFiles.add(this.filename);
+            console.log(`[${this.currentFileId}] 添加文件到处理列表: ${this.filename}`);
+          }
+
           // 如果是Vue文件且尚未处理
           if (filename.endsWith('.vue')) {
             try {
@@ -476,7 +530,7 @@ module.exports = function checkMyCodePlugin(babel) {
             console.log(`[${this.currentFileId}] 写入文件报告: ${fileReportPath}`);
 
             // 在处理完文件后尝试生成汇总报告
-            generateSummaryReport(this.outputDir, this.patterns, this.currentFileId);
+            generateSummaryReport(this.outputDir, this.patterns, this.currentFileId, processedFiles);
           } catch (e) {
             console.error(`[${this.currentFileId}] 生成文件报告错误: ${e.message}`);
           }
@@ -486,7 +540,7 @@ module.exports = function checkMyCodePlugin(babel) {
 
     post() {
       // post方法保留但简化，在所有文件处理完成后生成汇总报告
-      generateSummaryReport(this.outputDir, this.patterns, this.currentFileId);
+      generateSummaryReport(this.outputDir, this.patterns, this.currentFileId, processedFiles);
     }
   };
 };
@@ -626,4 +680,51 @@ function processComment(comment, filename) {
     ),
     metadata
   });
+}
+
+/**
+ * 在 babel-check.js 方式下，cleanupDeletedFiles 会清除之前的 report，因为它是一个一个文件处理的，而不是像 watch模式 那样能知道所有正在处理的文件。
+ */
+function cleanupDeletedFiles(outputDir, processedFiles) {
+  // 如果是 babel-check 模式，直接返回，不执行清理
+  const runMode = this.config.runMode;
+  if (runMode === 'check') {
+    return;
+  }
+
+  const tempDir = path.join(outputDir, 'temp');
+  
+  if (!fs.existsSync(tempDir)) {
+    return;
+  }
+
+  try {
+    const files = fs.readdirSync(tempDir);
+    const reportFiles = files.filter(file => file.startsWith('file-') && file.endsWith('.json'));
+
+    console.log(`检查需要清理的报告文件，当前处理的文件数: ${processedFiles.size}`);
+
+    reportFiles.forEach(reportFile => {
+      try {
+        const reportPath = path.join(tempDir, reportFile);
+        const reportData = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+        const originalFile = reportData.metadata.filename;
+
+        // Add more detailed logging
+        if (!fs.existsSync(originalFile)) {
+          console.log(`文件已被删除: ${originalFile}`);
+          fs.unlinkSync(reportPath);
+          console.log(`删除对应报告: ${reportFile}`);
+        } else if (!processedFiles.has(originalFile)) {
+          console.log(`文件未在本次处理中: ${originalFile}`);
+          fs.unlinkSync(reportPath);
+          console.log(`删除对应报告: ${reportFile}`);
+        }
+      } catch (e) {
+        console.warn(`处理报告文件时出错 ${reportFile}:`, e.message);
+      }
+    });
+  } catch (e) {
+    console.error('清理已删除文件的报告时出错:', e.message);
+  }
 }

@@ -1,10 +1,14 @@
 // babel-check.js
+// 在文件开头设置环境变量
+process.env.CHECK_MY_CODE_MODE = 'check';
+
 const babel = require('@babel/core');
 const fs = require('fs');
 const path = require('path');
 
 // 目标目录
-const targetDir = './source-save/biligame/cfwl/erznbb/h5';
+const targetDir = './';
+const excludeDir = ['node_modules', 'dist', 'build', 'public', 'static', 'assets', 'images', 'fonts'];
 
 // 全局变量，存储当前处理的文件名，供插件使用
 global.CURRENT_PROCESSING_FILE = null;
@@ -15,6 +19,10 @@ function findFiles(dir, fileList = []) {
 
     files.forEach(file => {
         const filePath = path.join(dir, file);
+        // 跳过 node_modules 目录
+        if (excludeDir.includes(file)) {
+            return;
+        }
         if (fs.statSync(filePath).isDirectory()) {
             findFiles(filePath, fileList);
         } else if (file.endsWith('.js') || file.endsWith('.vue')) {
