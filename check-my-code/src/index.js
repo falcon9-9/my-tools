@@ -200,10 +200,10 @@ function parseVueFile(filename) {
 }
 
 // 生成汇总报告
-function generateSummaryReport(outputDir, patterns, currentFileId, processedFiles) {
+function generateSummaryReport(outputDir, patterns, currentFileId, processedFiles, config) {
   try {
     // Clean up reports for deleted files first
-    cleanupDeletedFiles(outputDir, processedFiles);
+    cleanupDeletedFiles(outputDir, processedFiles, config);
     
     // 设置临时目录路径
     const tempDir = path.join(outputDir, 'temp');
@@ -530,7 +530,7 @@ module.exports = function checkMyCodePlugin(babel) {
             console.log(`[${this.currentFileId}] 写入文件报告: ${fileReportPath}`);
 
             // 在处理完文件后尝试生成汇总报告
-            generateSummaryReport(this.outputDir, this.patterns, this.currentFileId, processedFiles);
+            generateSummaryReport(this.outputDir, this.patterns, this.currentFileId, processedFiles, this.config);
           } catch (e) {
             console.error(`[${this.currentFileId}] 生成文件报告错误: ${e.message}`);
           }
@@ -540,7 +540,7 @@ module.exports = function checkMyCodePlugin(babel) {
 
     post() {
       // post方法保留但简化，在所有文件处理完成后生成汇总报告
-      generateSummaryReport(this.outputDir, this.patterns, this.currentFileId, processedFiles);
+      generateSummaryReport(this.outputDir, this.patterns, this.currentFileId, processedFiles, this.config);
     }
   };
 };
@@ -685,9 +685,10 @@ function processComment(comment, filename) {
 /**
  * 在 babel-check.js 方式下，cleanupDeletedFiles 会清除之前的 report，因为它是一个一个文件处理的，而不是像 watch模式 那样能知道所有正在处理的文件。
  */
-function cleanupDeletedFiles(outputDir, processedFiles) {
+function cleanupDeletedFiles(outputDir, processedFiles, config) {
   // 如果是 babel-check 模式，直接返回，不执行清理
-  const runMode = this.config.runMode;
+  const runMode = config.runMode;
+  console.log(`runMode: ${runMode}`);
   if (runMode === 'check') {
     return;
   }
@@ -702,21 +703,52 @@ function cleanupDeletedFiles(outputDir, processedFiles) {
     const files = fs.readdirSync(tempDir);
     const reportFiles = files.filter(file => file.startsWith('file-') && file.endsWith('.json'));
 
-    console.log(`检查需要清理的报告文件，当前处理的文件数: ${processedFiles.size}`);
+    console.log(`检查需要清理的报告文件1，当前处理的文件数: ${processedFiles.size}`);
+    console.log(`检查需要清理的报告文件，当前报告文件数: ${reportFiles.length}`);
 
     reportFiles.forEach(reportFile => {
       try {
         const reportPath = path.join(tempDir, reportFile);
         const reportData = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
         const originalFile = reportData.metadata.filename;
+        console.log(`originalFile: ${originalFile}`);
 
-        // Add more detailed logging
+        // 检查文件是否存在
         if (!fs.existsSync(originalFile)) {
           console.log(`文件已被删除: ${originalFile}`);
           fs.unlinkSync(reportPath);
           console.log(`删除对应报告: ${reportFile}`);
-        } else if (!processedFiles.has(originalFile)) {
+          return;
+        }
+
+        // 检查文件是否在本次处理中
+        if (!processedFiles.has(originalFile)) {
           console.log(`文件未在本次处理中: ${originalFile}`);
+          fs.unlinkSync(reportPath);
+          console.log(`删除对应报告: ${reportFile}`);
+          return;
+        }
+
+        // 检查文件内容中的todos是否还存在
+        const fileContent = fs.readFileSync(originalFile, 'utf8');
+        const oldTodos = reportData.todos || [];
+        let shouldDeleteReport = true;
+
+        // 对于每个旧的todo，检查其行号处是否还包含@check-my-code标记
+        for (const todo of oldTodos) {
+          const lines = fileContent.split('\n');
+          const lineContent = lines[todo.location.line - 1];
+          
+          // 如果在对应行找到@check-my-code标记，说明todo仍然存在
+          if (lineContent && lineContent.includes('@check-my-code')) {
+            shouldDeleteReport = false;
+            break;
+          }
+        }
+
+        // 如果所有旧的todos都不存在了，删除报告文件
+        if (shouldDeleteReport) {
+          console.log(`文件 ${originalFile} 中的todos已被删除`);
           fs.unlinkSync(reportPath);
           console.log(`删除对应报告: ${reportFile}`);
         }
