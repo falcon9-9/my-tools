@@ -1,59 +1,34 @@
 <template>
   <div id="app">
-    <h1>Vue组件拍平测试</h1>
+    <!-- <h1>Vue组件拍平测试</h1> -->
     <div class="container">
       <div class="panel">
         <h3>原始组件（引入子组件）</h3>
         <div class="content">
-          <AppOriginal />
+          <Demo />
         </div>
       </div>
       
       <div class="panel">
         <h3>拍平后组件（内联子组件）</h3>
         <div class="content">
-          <AppFlattened />
+          <DemoFlattened />
         </div>
       </div>
     </div>
 
-    <div class="code-preview">
-      <h2>代码对比</h2>
-      <div class="code-container">
-        <div class="code-panel">
-          <h4>原始代码结构</h4>
-          <pre>// App.vue
-import HelloWorld from './components/HelloWorld.vue'
-import Counter from './components/Counter.vue'
-
-export default {
-  components: { HelloWorld, Counter }
-}</pre>
-        </div>
-        <div class="code-panel">
-          <h4>拍平后代码结构</h4>
-          <pre>// App.flattened.vue
-const HelloWorld = { /* 内联的组件定义 */ }
-const Counter = { /* 内联的组件定义 */ }
-
-export default {
-  components: { HelloWorld, Counter }
-}</pre>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script>
-import AppOriginal from './AppOriginal.vue'
-import AppFlattened from './AppFlattened.vue'
+import Demo from './views/Demo.vue'
+import DemoFlattened from './views/Demo.flattened.vue'
 
 export default {
   name: 'App',
   components: {
-    AppOriginal,
-    AppFlattened
+    Demo,
+    DemoFlattened
   }
 }
 </script>
@@ -138,5 +113,6 @@ h1 {
   font-size: 14px;
   line-height: 1.5;
   margin: 0;
+  white-space: pre-wrap;
 }
 </style> 

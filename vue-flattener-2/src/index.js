@@ -17,23 +17,26 @@ class VueFlattener {
       console.log(`开始拍平组件: ${inputPath}`);
       
       // 使用组件内联器
+      console.log('🔧 创建ComponentInliner...');
       const inliner = new ComponentInliner(inputPath);
+      
+      console.log('🔍 执行内联...');
       const result = await inliner.inline();
       
-      // 收集所有样式（包括子组件的样式）
-      const allStyles = [...result.styles];
-      for (const comp of inliner.inlinedComponents) {
-        if (comp.styles) {
-          allStyles.push(...comp.styles);
-        }
-      }
+      console.log('📋 内联结果:');
+      console.log('  - Template长度:', result.template ? result.template.length : 0);
+      console.log('  - Script长度:', result.script ? result.script.length : 0);
+      console.log('  - Styles数量:', result.styles ? result.styles.length : 0);
       
       // 生成拍平后的组件
+      console.log('📝 生成组件...');
       const flattenedComponent = this.generateComponent(
         result.template,
         result.script,
-        allStyles
+        result.styles
       );
+      
+      console.log('💾 生成的组件长度:', flattenedComponent.length);
       
       // 写入文件
       await fs.ensureDir(path.dirname(outputPath));

@@ -1,0 +1,59 @@
+/* 主题样式文件 - theme.css */
+
+/* 基础颜色变量 */
+:root {
+  --primary-color: #3498db;
+  --secondary-color: #2ecc71;
+  --danger-color: #e74c3c;
+  --warning-color: #f39c12;
+  --text-color: #2c3e50;
+  --bg-color: #ecf0f1;
+  --border-color: #bdc3c7;
+}
+
+/* 基础主题样式 */
+.theme-card {
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px 0;
+  color: var(--text-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.theme-button {
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.theme-button:hover {
+  background-color: #2980b9;
+}
+
+.theme-button.secondary {
+  background-color: var(--secondary-color);
+}
+
+.theme-button.secondary:hover {
+  background-color: #27ae60;
+}
+
+.theme-text {
+  color: var(--text-color);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+}
+
+.theme-title {
+  color: var(--primary-color);
+  font-size: 1.5em;
+  font-weight: 600;
+  margin-bottom: 8px;
+} 
