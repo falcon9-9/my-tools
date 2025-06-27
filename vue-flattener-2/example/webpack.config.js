@@ -8,6 +8,12 @@ class VueFlattenPlugin {
     this.options = {
       // 监听的文件夹路径
       watchDir: path.resolve(__dirname, 'src/views'),
+      // 额外监听的依赖目录（用于触发重新拍平）
+      dependencyDirs: [
+        path.resolve(__dirname, 'src/components'),
+        path.resolve(__dirname, 'src/utils'),
+        path.resolve(__dirname, 'src/styles')
+      ],
       ...options
     };
     
@@ -43,7 +49,7 @@ class VueFlattenPlugin {
       const changedFiles = Array.from(compilation.modifiedFiles || []);
       const deletedFiles = Array.from(compilation.removedFiles || []);
       
-      // 只检查 views 文件夹下的Vue文件变化，排除拍平生成的文件
+      // 检查views文件夹下的Vue文件变化
       const viewsVueFiles = [...changedFiles, ...deletedFiles].filter(file => {
         const normalizedFile = path.normalize(file);
         const normalizedWatchDir = path.normalize(this.options.watchDir);
@@ -52,10 +58,36 @@ class VueFlattenPlugin {
                normalizedFile.includes(normalizedWatchDir);
       });
       
+      // 检查依赖目录下的文件变化（Vue、JS、CSS、SCSS文件）
+      const dependencyFiles = [...changedFiles, ...deletedFiles].filter(file => {
+        const normalizedFile = path.normalize(file);
+        
+        // 检查是否在依赖目录中
+        const isInDependencyDir = this.options.dependencyDirs.some(depDir => {
+          const normalizedDepDir = path.normalize(depDir);
+          return normalizedFile.includes(normalizedDepDir);
+        });
+        
+        // 检查文件类型（Vue、JS、CSS、SCSS）
+        const isRelevantFile = file.endsWith('.vue') || 
+                              file.endsWith('.js') || 
+                              file.endsWith('.css') || 
+                              file.endsWith('.scss');
+        
+        return isInDependencyDir && isRelevantFile && !file.includes('.flattened.vue');
+      });
+      
+      const allRelevantFiles = [...viewsVueFiles, ...dependencyFiles];
+      
       // 防抖：如果距离上次拍平不到1秒，则跳过
       const now = Date.now();
-      if (viewsVueFiles.length > 0 && (now - this.lastFlattenTime) > 1000) {
-        console.log(`[VueFlattenPlugin] 检测到views文件夹下Vue文件变化: ${viewsVueFiles.join(', ')}`);
+      if (allRelevantFiles.length > 0 && (now - this.lastFlattenTime) > 1000) {
+        if (viewsVueFiles.length > 0) {
+          console.log(`[VueFlattenPlugin] 检测到views文件变化: ${viewsVueFiles.join(', ')}`);
+        }
+        if (dependencyFiles.length > 0) {
+          console.log(`[VueFlattenPlugin] 检测到依赖文件变化: ${dependencyFiles.join(', ')}`);
+        }
         await this.flatten();
       }
       

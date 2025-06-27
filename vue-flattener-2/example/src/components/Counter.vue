@@ -7,7 +7,7 @@
     <div class="info">
       <div class="theme-text">ID: {{ componentId }}</div>
       <div class="theme-text">平方值: {{ squareFormatted }}</div>
-      <div class="loading-spinner animate-pulse" v-if="loading">spin</div>
+      <div class="loading-spinner animate-pulse" v-if="loading">spin1</div>
     </div>
   </div>
 </template>
@@ -48,6 +48,7 @@ export default {
   },
   mounted() {
     console.log(`Counter组件已挂载，ID: ${this.componentId}, 日期: ${formatDate()}`)
+    console.log('🔄 测试依赖文件监听功能')
   }
 }
 </script>

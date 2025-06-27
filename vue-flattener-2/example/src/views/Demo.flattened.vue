@@ -96,7 +96,7 @@
       <div class="info">
         <div class="theme-text">ID: {{ componentId }}</div>
         <div class="theme-text">平方值: {{ squareFormatted }}</div>
-        <div class="loading-spinner animate-pulse" v-if="loading"></div>
+        <div class="loading-spinner animate-pulse" v-if="loading">spin</div>
       </div>
     </div>`,
     name: 'Counter',
@@ -104,7 +104,7 @@
       return {
         count: 0,
         componentId: generateId(),
-        loading: false
+        loading: true
       }
     },
     computed: {
@@ -128,6 +128,7 @@
     },
     mounted() {
       console.log(`Counter组件已挂载，ID: ${this.componentId}, 日期: ${formatDate()}`)
+      console.log('🔄 测试依赖文件监听功能')
     }
   }
   
