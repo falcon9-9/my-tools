@@ -7,7 +7,7 @@
     <div class="info">
       <div class="theme-text">ID: {{ componentId }}</div>
       <div class="theme-text">平方值: {{ squareFormatted }}</div>
-      <div class="loading-spinner animate-pulse" v-if="loading">spin</div>
+      <div class="loading-spinner animate-pulse" v-if="loading">spin5678</div>
     </div>
   </div>
 </template>
@@ -16,7 +16,6 @@
 import { add, multiply, formatNumber, square } from '../utils/math.js'
 import { capitalize, generateId, formatDate } from '../utils/helpers.js'
 import '../styles/theme.css'
-import '../styles/animations.scss'
 
 export default {
   name: 'Counter',
@@ -53,6 +52,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import '../styles/animations.scss';
 .counter {
   display: inline-flex;
   align-items: center;

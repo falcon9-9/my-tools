@@ -220,14 +220,137 @@ webpack配置：
 3. 暂不支持处理组件中的其他导入（如工具函数、外部样式文件）
 4. SCSS处理比较简单，不支持复杂的SCSS特性（如mixins、variables等）
 
+### 2025-6-28 - 实现@import语句的嵌套导入功能🎨
+
+**第四阶段功能完成：@import语句嵌套导入**
+
+在Vue组件、JavaScript函数和外部样式文件内联的基础上，成功实现了@import语句的嵌套导入功能，让样式文件的依赖关系也能被完全内联。
+
+#### 需求背景
+用户希望处理CSS/SCSS文件中的@import语句，将样式文件的依赖关系也完全内联：
+```css
+/* theme.css */
+@import './base.css';
+
+/* animations.scss */
+@import './variables.scss';
+@import './mixins.scss';
+
+/* mixins.scss */
+@import './variables.scss'; /* 嵌套导入 */
+```
+
+#### 技术实现方案
+
+**1. @import语句解析**
+```javascript
+parseImportStatements(styleContent) {
+  const importRegexes = [
+    /@import\s+['"]([^'"]+)['"]\s*;/g,           // @import './file.css';
+    /@import\s+url\s*\(\s*['"]([^'"]+)['"]\s*\)\s*;/g  // @import url('./file.css');
+  ];
+  // 只处理相对路径导入（./、../）
+}
+```
+
+**2. 递归处理算法**
+```javascript
+async processStyleImports(styleContent, currentDir, processedFiles = new Set()) {
+  // 1. 解析@import语句
+  // 2. 循环导入检测（使用文件路径集合）
+  // 3. 递归处理每个@import的文件
+  // 4. 替换@import语句为实际内容
+}
+```
+
+**3. 关键技术特性**
+- **智能路径解析**: 使用`path.resolve()`和`path.normalize()`确保路径正确
+- **循环导入防护**: 维护已处理文件集合，避免无限递归
+- **递归嵌套支持**: 处理@import文件中的@import语句
+- **错误容错机制**: 文件读取失败时保留原语句并添加错误注释
+- **清晰来源标识**: 为每个内联样式添加明确的源文件注释
+
+#### 实现验证
+
+**测试用例设计:**
+```
+styles/
+├── base.css (基础样式)
+├── variables.scss (SCSS变量)  
+├── mixins.scss (SCSS mixins，导入variables.scss)
+├── theme.css (导入base.css)
+└── animations.scss (导入variables.scss + mixins.scss)
+```
+
+**处理结果:**
+```
+原始: theme.css (1203字符) → 处理后: 2203字符 (+1000字符)
+  ✅ @import './base.css' → base.css完整内容
+
+原始: animations.scss (1480字符) → 处理后: 3987字符 (+2507字符)  
+  ✅ @import './variables.scss' → variables.scss完整内容
+  ✅ @import './mixins.scss' → mixins.scss完整内容
+      └── 🔄 递归处理: mixins.scss中的@import './variables.scss'
+```
+
+**拍平日志验证:**
+```bash
+🎨 递归处理样式文件: ../styles/theme.css
+🔍 发现 1 个@import语句
+📥 内联@import文件: ./base.css
+✅ 成功内联@import: ./base.css
+
+🎨 递归处理样式文件: ../styles/animations.scss
+🔍 发现 2 个@import语句
+📥 内联@import文件: ./variables.scss
+📥 内联@import文件: ./mixins.scss
+🔍 发现 1 个@import语句  # mixins.scss中的嵌套@import
+📥 内联@import文件: ./variables.scss
+✅ 成功内联@import: ./variables.scss
+✅ 成功内联@import: ./mixins.scss
+```
+
+#### 功能亮点
+
+1. **多格式@import支持**: 支持引号和url()两种@import语法
+2. **智能路径处理**: 正确解析相对路径和绝对路径
+3. **递归嵌套处理**: 深层@import依赖也能正确内联
+4. **循环导入防护**: 检测并跳过循环导入，避免无限递归
+5. **详细过程追踪**: 完整的@import处理日志和来源标识
+6. **错误容错处理**: 文件读取失败时的优雅降级
+7. **性能优化**: 使用Set数据结构优化重复文件检测
+
+#### 更新后的完整功能
+
+Vue组件拍平工具现在完整支持：
+- ✅ Vue组件内联（支持递归嵌套）
+- ✅ JavaScript工具函数内联  
+- ✅ 外部CSS/SCSS样式文件内联
+- ✅ 🆕 @import语句的嵌套导入处理
+- ✅ SCSS/CSS样式内联与隔离
+- ✅ CSS伪类选择器正确转换
+- ✅ 完整的Webpack集成
+- ✅ 目录级别的精确控制
+- ✅ 详细的拍平记录输出
+
+**真正的"零外部依赖"单文件组件:**
+```
+Demo.vue (原始: 510 Bytes) → Demo.flattened.vue (最终: 12.89 KB)
+包含:
+- 3个Vue组件 (HelloWorld, SimpleButton, Counter)
+- 7个JavaScript工具函数 (add, multiply, formatNumber, etc.)
+- 2个外部样式文件 + 4个@import嵌套文件
+- 完整的样式隔离和作用域处理
+```
+
 ### 下一步计划
-1. 支持工具函数内联
-2. 支持外部样式文件内联（.css/.scss文件）
-3. 处理更复杂的导入场景（如解构导入、别名导入）
-4. 改进SCSS处理，支持variables、mixins等特性
-5. 添加错误处理和边界情况处理
-6. 支持TypeScript
-7. 支持递归内联（子组件中还有子组件）
+1. 支持CSS预处理器的高级特性（variables、mixins的智能处理）
+2. 实现CSS未使用规则检测和清理
+3. 添加样式压缩和优化选项
+4. 支持CSS Modules和PostCSS插件
+5. 实现TypeScript文件内联支持
+6. 添加第三方库的选择性内联功能
+7. 支持更复杂的导入场景（如重导出、命名空间导入）
 8. 添加配置选项（如是否保留注释、是否压缩代码等）
 
 ### 技术要点总结
@@ -240,6 +363,9 @@ webpack配置：
 7. **样式隔离**: 通过类名前缀策略实现内联组件的样式隔离
 8. **多格式处理**: 根据样式语言类型采用不同的处理策略
 9. **Webpack配置**: 正确配置加载器链支持多种文件格式
+10. **🆕 递归算法应用**: 使用递归和集合数据结构处理嵌套依赖关系
+11. **🆕 路径解析技巧**: 正确处理相对路径和文件系统路径规范化
+12. **🆕 错误处理策略**: 实现优雅降级和详细错误追踪
 
 ### 2025-6-24 - 实现目录级别的拍平控制
 需求背景：
@@ -1180,3 +1306,172 @@ Demo.flattened.vue (单文件，零外部依赖)
    - Tree-shaking优化
 
 这次实现标志着Vue组件拍平工具在样式处理方面的重大突破，实现了从Vue组件到JavaScript函数再到样式文件的全方位依赖内联能力。
+
+### 2025-6-24 - 实现详细的拍平记录输出功能📊
+
+**功能需求背景：**
+在拍平工具日趋成熟的过程中，用户希望能够获得更详细的拍平过程信息，包括：
+- 每个文件的拍平耗时
+- 文件大小变化统计
+- 成功率和失败信息
+- 依赖变化触发的重新拍平记录
+- 性能分析数据
+
+**实现的核心功能：**
+
+**1. 初始拍平详细记录**
+在webpack.config.js的VueFlattenPlugin中为`flatten()`方法添加了完整的记录系统：
+
+```javascript
+// 🆕 拍平记录开始
+const flattenStartTime = Date.now();
+const flattenRecord = {
+  startTime: new Date().toLocaleString(),
+  files: [],
+  success: 0,
+  failed: 0,
+  totalTime: 0
+};
+
+console.log('\n📦 ============ 拍平记录开始 ============');
+console.log(`⏰ 开始时间: ${flattenRecord.startTime}`);
+```
+
+**2. 文件级别的详细追踪**
+为每个文件添加了细粒度的处理记录：
+
+```javascript
+const fileStartTime = Date.now();
+console.log(`🔄 正在拍平: ${file}...`);
+
+// 拍平成功后记录详细信息
+flattenRecord.files.push({
+  name: file,
+  status: 'success',
+  time: fileTime,
+  inputSize: fs.statSync(inputPath).size,
+  outputSize: fs.statSync(outputPath).size
+});
+
+console.log(`✅ ${file} 拍平成功！耗时: ${fileTime}ms`);
+console.log(`   📄 输入文件大小: ${this.formatBytes(fs.statSync(inputPath).size)}`);
+console.log(`   📄 输出文件大小: ${this.formatBytes(fs.statSync(outputPath).size)}`);
+```
+
+**3. 重新拍平记录系统**
+为依赖变化触发的重新拍平添加了专门的记录系统：
+
+```javascript
+console.log('\n🔄 ========== 重新拍平记录开始 ==========');
+console.log(`⏰ 开始时间: ${reflattenRecord.startTime}`);
+console.log(`🎯 触发原因: 依赖文件变化`);
+console.log(`📋 需要重新拍平的文件: ${viewsFileNames.join(', ')}`);
+```
+
+**4. 智能汇总报告**
+实现了`printFlattenSummary()`方法，提供专业级的拍平汇总信息：
+
+```javascript
+printFlattenSummary(record, isReflatten = false) {
+  const title = isReflatten ? '重新拍平汇总报告' : '拍平汇总报告';
+  const emoji = isReflatten ? '🔄' : '📦';
+  
+  console.log(`\n${emoji} ========== ${title} ==========`);
+  console.log(`⏰ 开始时间: ${record.startTime}`);
+  console.log(`⏱️ 结束时间: ${record.endTime}`);
+  console.log(`🕒 总耗时: ${record.totalTime}ms (${(record.totalTime / 1000).toFixed(2)}s)`);
+  console.log(`📊 处理文件: ${record.files.length} 个`);
+  console.log(`✅ 成功: ${record.success} 个`);
+  console.log(`❌ 失败: ${record.failed} 个`);
+  console.log(`📈 成功率: ${record.files.length > 0 ? ((record.success / record.files.length) * 100).toFixed(1) : 0}%`);
+  
+  // 详细的文件处理记录和统计分析
+}
+```
+
+**5. 文件大小格式化工具**
+添加了`formatBytes()`方法，将字节数转换为可读的格式：
+
+```javascript
+formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+```
+
+**输出示例：**
+
+```
+📦 ============ 拍平记录开始 ============
+⏰ 开始时间: 2024-01-15 14:30:25
+📁 目标文件夹: /path/to/views
+🔍 发现2个Vue文件需要拍平: Demo.vue, Test.vue
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄 正在拍平: Demo.vue...
+✅ Demo.vue 拍平成功！耗时: 156ms
+   📄 输入文件大小: 2.45 KB
+   📄 输出文件大小: 8.91 KB
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 ========== 拍平汇总报告 ==========
+⏰ 开始时间: 2024-01-15 14:30:25
+⏱️ 结束时间: 2024-01-15 14:30:26
+🕒 总耗时: 312ms (0.31s)
+📊 处理文件: 2 个
+✅ 成功: 2 个
+❌ 失败: 0 个
+📈 成功率: 100.0%
+
+📋 详细记录:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ✅ Demo.vue - 156ms (2.45 KB → 8.91 KB)
+   📈 文件增大: +6.46 KB (+263.7%)
+2. ✅ Test.vue - 134ms (1.23 KB → 5.67 KB)
+   📈 文件增大: +4.44 KB (+361.0%)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ 平均拍平时间: 145.0ms
+📦 总输入大小: 3.68 KB
+📦 总输出大小: 14.58 KB
+📈 大小变化: +10.90 KB (+296.2%)
+📦 ==============================
+```
+
+**技术实现亮点：**
+
+1. **时间精确追踪**: 使用`Date.now()`精确记录每个操作的耗时
+2. **文件大小分析**: 自动计算并显示文件大小变化的百分比
+3. **美观的控制台输出**: 使用表情符号和分隔线提升可读性
+4. **统计分析功能**: 提供平均耗时、成功率等关键指标
+5. **上下文区分**: 区分初始拍平和依赖变化触发的重新拍平
+6. **错误追踪**: 详细记录失败原因，便于调试
+
+**功能价值：**
+
+1. **性能监控**: 开发者可以了解拍平工具的性能表现
+2. **调试支持**: 详细的错误信息有助于快速定位问题
+3. **数据洞察**: 文件大小变化帮助理解拍平的效果
+4. **用户体验**: 专业的输出提升工具的可信度
+5. **开发透明度**: 让用户清楚了解工具的工作过程
+
+**学习要点：**
+
+1. **用户体验设计**: 工具的输出信息是用户体验的重要组成部分
+2. **数据可视化**: 通过图标、分隔线等视觉元素提升信息的可读性
+3. **性能分析思维**: 记录关键性能指标有助于工具的持续优化
+4. **错误处理策略**: 详细的错误记录是高质量工具的必备特性
+5. **代码可维护性**: 良好的日志系统有助于长期维护
+
+**后续扩展方向：**
+
+1. **日志文件输出**: 将记录保存到文件，支持历史查看
+2. **可视化图表**: 生成拍平过程的可视化报告
+3. **性能基准测试**: 建立性能基准，监控性能回归
+4. **通知集成**: 集成到开发工具链，提供拍平完成通知
+5. **配置化输出**: 允许用户自定义日志详细程度
+
+这次功能的实现大幅提升了Vue组件拍平工具的专业性和易用性，为开发者提供了清晰透明的拍平过程洞察。

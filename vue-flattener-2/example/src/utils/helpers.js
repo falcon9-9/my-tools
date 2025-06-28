@@ -8,7 +8,7 @@ export function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// 生成随机ID
+// 生成随机ID 1
 export function generateId() {
   return 'id_' + Math.random().toString(36).substr(2, 9);
 }

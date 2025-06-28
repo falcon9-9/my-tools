@@ -1,0 +1,26 @@
+// SCSS变量文件 - variables.scss
+// 这个文件将被其他样式文件通过@import导入
+
+// 颜色变量
+$primary-color: #3498db;
+$secondary-color: #2ecc71;
+$danger-color: #e74c3c;
+$warning-color: #f39c12;
+$text-color: #2c3e50;
+$bg-color: #ecf0f1;
+$border-color: #bdc3c7;
+
+// 尺寸变量
+$border-radius: 8px;
+$padding-base: 16px;
+$margin-base: 8px;
+$font-size-base: 14px;
+
+// 动画变量
+$transition-speed: 0.3s;
+$hover-transform: translateY(-3px);
+
+// 阴影变量
+$box-shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+$box-shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.15);
+$box-shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.2); 

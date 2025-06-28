@@ -1,8 +1,8 @@
 <template>
-  <div class="demo">
-      <HelloWorld msg="欢迎使用Vue组件拍平工具!" />
-      <Counter />
-    </div>
+      <div class="demo">
+        <HelloWorld msg="欢迎使用Vue组件拍平工具！@import功能已实现" />
+        <Counter />
+      </div>
 </template>
 
 <script>

@@ -221,7 +221,7 @@ class ComponentInliner {
   }
 
   /**
-   * 内联样式文件（CSS/SCSS）
+   * 内联样式文件（CSS/SCSS）支持@import嵌套导入
    * @param {Object} importInfo - import信息
    * @returns {Promise<Object>} 内联的样式内容
    */
@@ -234,8 +234,11 @@ class ComponentInliner {
       // 确定样式语言类型
       const lang = importInfo.source.endsWith('.scss') ? 'scss' : 'css';
       
+      // 🆕 处理@import语句的嵌套导入
+      const processedContent = await this.processStyleImports(styleContent, path.dirname(styleFilePath));
+      
       return {
-        content: styleContent,
+        content: processedContent,
         lang: lang,
         source: importInfo.source,
         scoped: false // 外部样式文件通常是全局的
@@ -244,6 +247,119 @@ class ComponentInliner {
       console.error(`❌ 无法内联样式文件 ${importInfo.source}:`, error.message);
       return null;
     }
+  }
+
+  /**
+   * 递归处理样式文件中的@import语句
+   * @param {string} styleContent - 样式文件内容
+   * @param {string} currentDir - 当前样式文件所在目录
+   * @param {Set} processedFiles - 已处理的文件集合（防止循环导入）
+   * @returns {Promise<string>} 处理后的样式内容
+   */
+  async processStyleImports(styleContent, currentDir, processedFiles = new Set()) {
+    try {
+      // 解析@import语句
+      const importStatements = this.parseImportStatements(styleContent);
+      
+      if (importStatements.length === 0) {
+        return styleContent; // 没有@import语句，直接返回
+      }
+      
+      console.log(`🔍 发现 ${importStatements.length} 个@import语句`);
+      
+      let processedContent = styleContent;
+      
+      // 处理每个@import语句
+      for (const importStatement of importStatements) {
+        const { statement, path: importPath } = importStatement;
+        
+        // 解析完整的文件路径
+        const fullPath = path.resolve(currentDir, importPath);
+        const normalizedPath = path.normalize(fullPath);
+        
+        // 检查循环导入
+        if (processedFiles.has(normalizedPath)) {
+          console.warn(`⚠️ 检测到循环导入，跳过: ${importPath}`);
+          // 移除@import语句但不替换内容
+          processedContent = processedContent.replace(statement, `/* 循环导入已跳过: ${importPath} */`);
+          continue;
+        }
+        
+        try {
+          // 添加到已处理文件集合
+          const newProcessedFiles = new Set(processedFiles);
+          newProcessedFiles.add(normalizedPath);
+          
+          // 读取被导入的文件
+          const importedContent = await fs.readFile(fullPath, 'utf-8');
+          console.log(`📥 内联@import文件: ${importPath}`);
+          
+          // 递归处理被导入文件中的@import语句
+          const recursivelyProcessedContent = await this.processStyleImports(
+            importedContent, 
+            path.dirname(fullPath), 
+            newProcessedFiles
+          );
+          
+          // 替换@import语句为实际内容
+          const replacementContent = `/* 📦 来自 ${importPath} 的内联样式 */\n${recursivelyProcessedContent}\n/* 📦 结束来自 ${importPath} 的样式 */`;
+          processedContent = processedContent.replace(statement, replacementContent);
+          
+          console.log(`✅ 成功内联@import: ${importPath}`);
+          
+        } catch (error) {
+          console.error(`❌ 无法读取@import文件 ${importPath}:`, error.message);
+          // 保留原始@import语句，添加错误注释
+          processedContent = processedContent.replace(statement, `${statement} /* 导入失败: ${error.message} */`);
+        }
+      }
+      
+      return processedContent;
+      
+    } catch (error) {
+      console.error(`❌ 处理@import语句时出错:`, error.message);
+      return styleContent; // 出错时返回原始内容
+    }
+  }
+
+  /**
+   * 解析样式文件中的@import语句
+   * @param {string} styleContent - 样式文件内容
+   * @returns {Array} @import语句数组
+   */
+  parseImportStatements(styleContent) {
+    const importStatements = [];
+    
+    // 匹配各种@import格式
+    const importRegexes = [
+      // @import './file.css';
+      // @import "./file.scss";
+      /@import\s+['"]([^'"]+)['"]\s*;/g,
+      
+      // @import url('./file.css');
+      // @import url("./file.scss");
+      /@import\s+url\s*\(\s*['"]([^'"]+)['"]\s*\)\s*;/g
+    ];
+    
+    for (const regex of importRegexes) {
+      let match;
+      while ((match = regex.exec(styleContent)) !== null) {
+        const statement = match[0];
+        const importPath = match[1];
+        
+        // 只处理相对路径导入（./、../）
+        if (importPath.startsWith('./') || importPath.startsWith('../')) {
+          importStatements.push({
+            statement: statement,
+            path: importPath
+          });
+        } else {
+          console.log(`⏭️ 跳过非相对路径@import: ${importPath}`);
+        }
+      }
+    }
+    
+    return importStatements;
   }
 
   /**
@@ -505,18 +621,21 @@ class ComponentInliner {
             console.log(`🔧 递归内联JS文件: ${childImp.source}`);
           }
         } else if (childImp.source.endsWith('.css') || childImp.source.endsWith('.scss')) {
-          // 🎨 递归处理子组件中的样式文件
+          // 🎨 递归处理子组件中的样式文件（支持@import嵌套导入）
           console.log(`🎨 递归处理样式文件: ${childImp.source}`);
           const styleFilePath = path.resolve(path.dirname(componentPath), childImp.source);
           const styleContent = await fs.readFile(styleFilePath, 'utf-8');
           const lang = childImp.source.endsWith('.scss') ? 'scss' : 'css';
+          
+          // 🆕 处理@import语句的嵌套导入
+          const processedContent = await this.processStyleImports(styleContent, path.dirname(styleFilePath));
           
           // 将子组件中的样式也添加到主组件的内联样式列表中
           if (!this.inlinedStyles) {
             this.inlinedStyles = [];
           }
           this.inlinedStyles.push({
-            content: styleContent,
+            content: processedContent,
             lang: lang,
             source: childImp.source,
             scoped: false
