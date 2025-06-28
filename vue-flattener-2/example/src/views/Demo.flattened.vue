@@ -96,7 +96,7 @@
       <div class="info">
         <div class="theme-text">ID: {{ componentId }}</div>
         <div class="theme-text">平方值: {{ squareFormatted }}</div>
-        <div class="loading-spinner animate-pulse" v-if="loading">spin5678</div>
+        <div class="loading-spinner animate-pulse" v-if="loading">spin9</div>
       </div>
     </div>`,
     name: 'Counter',
