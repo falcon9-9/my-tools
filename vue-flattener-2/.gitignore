@@ -1,0 +1,13 @@
+
+
+# ========== Vue拍平工具自动生成 ==========
+*.flattened.vue
+**/*.flattened.vue
+# Vue拍平工具生成的文件
+*.flat.vue
+**/*.flat.vue
+
+# ========== Vue拍平工具自动生成 ==========
+# Vue拍平工具 - 自定义后缀
+*.inline.vue
+**/*.inline.vue

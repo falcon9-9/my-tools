@@ -7,12 +7,23 @@ const VueParser = require('../parser/VueParser');
  * 用于将子组件内联到主组件中
  */
 class ComponentInliner {
-  constructor(mainComponentPath) {
+  constructor(mainComponentPath, options = {}) {
     this.mainPath = mainComponentPath;
     this.mainDir = path.dirname(mainComponentPath);
     this.inlinedComponents = [];
     this.componentStyles = []; // 收集组件样式
     this.inlinedStyles = []; // 收集内联的样式文件
+    this.silent = options.silent || false;
+  }
+
+  /**
+   * 日志输出辅助方法
+   * @param {...any} args - 日志参数
+   */
+  log(...args) {
+    if (!this.silent) {
+      console.log(...args);
+    }
   }
 
   /**
@@ -29,25 +40,25 @@ class ComponentInliner {
     const parsed = parser.parse();
 
       // 分析导入的组件和工具函数
-      console.log('🔍 分析import语句...');
+      this.log('🔍 分析import语句...');
     const imports = this.analyzeImports(parsed.script);
-      console.log('✅ 发现', imports.length, '个import:');
+      this.log('✅ 发现', imports.length, '个import:');
       imports.forEach(imp => {
-        console.log(`  - ${imp.type || '未知'}: ${imp.name || imp.namedImports} from ${imp.source}`);
+        this.log(`  - ${imp.type || '未知'}: ${imp.name || imp.namedImports} from ${imp.source}`);
       });
       
       this.inlinedFunctions = []; // 收集内联的工具函数
       
-      console.log('🔧 开始内联处理...');
+      this.log('🔧 开始内联处理..');
       // 内联每个子组件和工具函数
     for (const imp of imports) {
       if (imp.source.endsWith('.vue')) {
-          console.log(`📦 处理Vue组件: ${imp.source}`);
+          this.log(`📦 处理Vue组件: ${imp.source}`);
           // 处理Vue组件
         const componentContent = await this.inlineComponent(imp);
         if (componentContent) {
           this.inlinedComponents.push(componentContent);
-            console.log(`✅ 成功内联Vue组件: ${imp.name}`);
+            this.log(`✅ 成功内联Vue组件: ${imp.name}`);
           // 收集组件样式
           if (componentContent.styles) {
             this.componentStyles.push({
@@ -57,17 +68,17 @@ class ComponentInliner {
           }
           }
         } else if (imp.source.endsWith('.js')) {
-          console.log(`🔧 处理JavaScript文件: ${imp.source}`);
+          this.log(`🔧 处理JavaScript文件: ${imp.source}`);
           // 🔧 处理JavaScript工具函数
           const functionContent = await this.inlineJavaScriptFile(imp);
           if (functionContent) {
             this.inlinedFunctions.push(functionContent);
-            console.log(`✅ 成功内联JavaScript函数: ${Object.keys(functionContent.functions).join(', ')}`);
+            this.log(`✅ 成功内联JavaScript函数: ${Object.keys(functionContent.functions).join(', ')}`);
           } else {
-            console.log(`❌ JavaScript文件处理失败: ${imp.source}`);
+            this.log(`❌ JavaScript文件处理失败: ${imp.source}`);
         }
       } else if (imp.source.endsWith('.css') || imp.source.endsWith('.scss')) {
-        console.log(`🎨 处理样式文件: ${imp.source}`);
+        this.log(`🎨 处理样式文件: ${imp.source}`);
         // 🎨 处理样式文件
         const styleContent = await this.inlineStyleFile(imp);
         if (styleContent) {
@@ -76,22 +87,22 @@ class ComponentInliner {
             this.inlinedStyles = [];
           }
           this.inlinedStyles.push(styleContent);
-          console.log(`✅ 成功内联样式文件: ${imp.source}`);
+          this.log(`✅ 成功内联样式文件: ${imp.source}`);
         } else {
-          console.log(`❌ 样式文件处理失败: ${imp.source}`);
+          this.log(`❌ 样式文件处理失败: ${imp.source}`);
         }
       }
     }
 
-      console.log('📝 更新主组件script...');
+      this.log('📝 更新主组件script...');
     // 更新主组件的script
     const updatedScript = this.updateMainScript(parsed.script, imports);
-      console.log('✅ Script更新完成，长度:', updatedScript.length);
+      this.log('�?Script更新完成，长度:', updatedScript.length);
 
-      console.log('🎨 合并样式...');
+      this.log('🎨 合并样式...');
     // 合并所有样式
     const allStyles = this.mergeStyles(parsed.styles);
-      console.log('✅ 样式合并完成，共', allStyles.length, '个样式块');
+      this.log('✅ 样式合并完成，共', allStyles.length, '个样式块');
 
       const result = {
       template: parsed.template,
@@ -99,7 +110,7 @@ class ComponentInliner {
       styles: allStyles
     };
       
-      console.log('🎉 内联完成！');
+      this.log('🎉 内联完成!');
       return result;
     } catch (error) {
       console.error('❌ ComponentInliner.inline() 出错:', error);
@@ -115,7 +126,7 @@ class ComponentInliner {
   analyzeImports(script) {
     const imports = [];
     
-    // 支持多种import格式：
+    // 支持多种import格式:
     // 1. 默认导入：import Component from './path'
     // 2. 命名导入：import { func1, func2 } from './path'
     // 3. 混合导入：import Default, { named } from './path'
@@ -135,7 +146,7 @@ class ComponentInliner {
       imports.push(importInfo);
     }
     
-    // 匹配直接导入（无from关键字，通常用于样式文件）
+    // 匹配直接导入（无from关键字，通常用于样式文件)
     const directImportRegex = /import\s+['"]([^'"]+)['"];?/g;
     while ((match = directImportRegex.exec(script)) !== null) {
       const source = match[1];
@@ -164,7 +175,7 @@ class ComponentInliner {
   parseImportClause(importClause, source, statement) {
     // 检查是否包含花括号（命名导入）
     if (importClause.includes('{')) {
-      // 命名导入或混合导入
+      // 命名导入或混合导�?
       const namedMatch = importClause.match(/\{\s*([^}]+)\s*\}/);
       const defaultMatch = importClause.match(/^([^,{]+)(?=,|\{|$)/);
       
@@ -265,7 +276,7 @@ class ComponentInliner {
         return styleContent; // 没有@import语句，直接返回
       }
       
-      console.log(`🔍 发现 ${importStatements.length} 个@import语句`);
+      this.log(`🔍 发现 ${importStatements.length} 个@import语句`);
       
       let processedContent = styleContent;
       
@@ -279,9 +290,9 @@ class ComponentInliner {
         
         // 检查循环导入
         if (processedFiles.has(normalizedPath)) {
-          console.warn(`⚠️ 检测到循环导入，跳过: ${importPath}`);
+          console.warn(`⚠️ 检测到循环导入，跳过 ${importPath}`);
           // 移除@import语句但不替换内容
-          processedContent = processedContent.replace(statement, `/* 循环导入已跳过: ${importPath} */`);
+          processedContent = processedContent.replace(statement, `/* 循环导入已跳过 ${importPath} */`);
           continue;
         }
         
@@ -292,7 +303,7 @@ class ComponentInliner {
           
           // 读取被导入的文件
           const importedContent = await fs.readFile(fullPath, 'utf-8');
-          console.log(`📥 内联@import文件: ${importPath}`);
+          this.log(`📥 内联@import文件: ${importPath}`);
           
           // 递归处理被导入文件中的@import语句
           const recursivelyProcessedContent = await this.processStyleImports(
@@ -302,10 +313,10 @@ class ComponentInliner {
           );
           
           // 替换@import语句为实际内容
-          const replacementContent = `/* 📦 来自 ${importPath} 的内联样式 */\n${recursivelyProcessedContent}\n/* 📦 结束来自 ${importPath} 的样式 */`;
+          const replacementContent = `/* 📦 来自 ${importPath} 的内联样式*/\n${recursivelyProcessedContent}\n/* 📦 结束来自 ${importPath} 的样式*/`;
           processedContent = processedContent.replace(statement, replacementContent);
           
-          console.log(`✅ 成功内联@import: ${importPath}`);
+          this.log(`✅ 成功内联@import: ${importPath}`);
           
         } catch (error) {
           console.error(`❌ 无法读取@import文件 ${importPath}:`, error.message);
@@ -354,7 +365,7 @@ class ComponentInliner {
             path: importPath
           });
         } else {
-          console.log(`⏭️ 跳过非相对路径@import: ${importPath}`);
+          this.log(`⏭️ 跳过非相对路径@import: ${importPath}`);
         }
       }
     }
@@ -377,7 +388,7 @@ class ComponentInliner {
     while ((match = exportFunctionStartRegex.exec(jsContent)) !== null) {
       const functionName = match[1];
       const startPos = match.index;
-      const paramStartPos = match.index + match[0].length - 1; // 参数开始的位置（左括号）
+      const paramStartPos = match.index + match[0].length - 1; // 参数开始的位置（左括号)
       
       // 使用括号平衡算法找到参数结束位置
       let parenCount = 1;
@@ -394,7 +405,7 @@ class ComponentInliner {
         continue;
       }
       
-      // 找到函数体的开始位置（左大括号）
+      // 找到函数体的开始位置（左大括号)
       let braceStartPos = paramEndPos;
       while (braceStartPos < jsContent.length && jsContent[braceStartPos] !== '{') {
         braceStartPos++;
@@ -513,7 +524,7 @@ class ComponentInliner {
         const objMatch = defaultContent.match(/\{([\s\S]*)\}/);
         if (objMatch) {
           const objContent = objMatch[1];
-          // 简单解析对象属性（方法引用）
+          // 简单解析对象属性（方法引用)
           const propRegex = /(\w+)(?:\s*:\s*(\w+))?/g;
           let propMatch;
           while ((propMatch = propRegex.exec(objContent)) !== null) {
@@ -564,7 +575,7 @@ class ComponentInliner {
   }
 
   /**
-   * 内联单个组件（支持递归嵌套）
+   * 内联单个组件（支持递归嵌套)
    * @param {Object} importInfo - import信息
    * @returns {Promise<Object>} 内联的组件定义
    */
@@ -618,11 +629,11 @@ class ComponentInliner {
               source: childImp.source
             });
             
-            console.log(`🔧 递归内联JS文件: ${childImp.source}`);
+            this.log(`🔧 递归内联JS文件: ${childImp.source}`);
           }
         } else if (childImp.source.endsWith('.css') || childImp.source.endsWith('.scss')) {
-          // 🎨 递归处理子组件中的样式文件（支持@import嵌套导入）
-          console.log(`🎨 递归处理样式文件: ${childImp.source}`);
+          // 🎨 递归处理子组件中的样式文件（支持@import嵌套导入源
+          this.log(`🎨 递归处理样式文件: ${childImp.source}`);
           const styleFilePath = path.resolve(path.dirname(componentPath), childImp.source);
           const styleContent = await fs.readFile(styleFilePath, 'utf-8');
           const lang = childImp.source.endsWith('.scss') ? 'scss' : 'css';
@@ -641,7 +652,7 @@ class ComponentInliner {
             scoped: false
           });
           
-          console.log(`✅ 成功递归内联样式文件: ${childImp.source}`);
+          this.log(`✅ 成功递归内联样式文件: ${childImp.source}`);
         }
       }
 
@@ -651,7 +662,7 @@ class ComponentInliner {
       // 为组件生成唯一的类名前缀
       const classPrefix = `${importInfo.name.toLowerCase()}-component`;
       
-      // 包装模板，添加唯一的类名（同级方式）
+      // 包装模板，添加唯一的类名（同级方式)
       const wrappedTemplate = this.wrapTemplate(parsed.template, classPrefix);
       
       // 生成内联组件定义
@@ -694,7 +705,7 @@ class ComponentInliner {
   }
 
   /**
-   * 包装模板，添加唯一的类名（同级方式）
+   * 包装模板，添加唯一的类名（同级方式)
    * @param {string} template - 原始模板
    * @param {string} classPrefix - 类名前缀
    * @returns {string} 包装后的模板
@@ -739,7 +750,7 @@ class ComponentInliner {
     const configMatch = script.match(/export\s+default\s+({[\s\S]*})/);
     if (configMatch) {
       const config = configMatch[1];
-      // 提取组件选项（移除外层大括号）
+      // 提取组件选项（移除外层大括号)
       const innerMatch = config.match(/{\s*([\s\S]*)\s*}/);
       return innerMatch ? innerMatch[1] : '';
     }
@@ -771,7 +782,7 @@ class ComponentInliner {
   }
 
   /**
-   * 更新组件的script（用于子组件递归处理）
+   * 更新组件的script（用于子组件递归处理)
    * @param {string} script - 原始script内容
    * @param {Array} imports - import信息数组
    * @param {Array} childComponents - 子组件数组
@@ -780,7 +791,7 @@ class ComponentInliner {
   updateComponentScript(script, imports, childComponents) {
     let updatedScript = script;
 
-    // 移除.vue组件、.js文件和样式文件的import语句
+    // 移除.vue组件、js文件和样式文件的import语句
     for (const imp of imports) {
       if (imp.source.endsWith('.vue') || imp.source.endsWith('.js') || 
           imp.source.endsWith('.css') || imp.source.endsWith('.scss')) {
@@ -788,7 +799,7 @@ class ComponentInliner {
       }
     }
 
-    // 提取组件配置（移除export default）
+    // 提取组件配置（移除export default�?
     const componentConfig = this.extractComponentConfig(updatedScript);
     
     // ⚠️ 注意：对于递归嵌套，我们不在这里添加子组件定义
@@ -807,7 +818,7 @@ class ComponentInliner {
   updateMainScript(script, imports) {
     let updatedScript = script;
 
-    // 移除.vue组件、.js文件和样式文件的import语句
+    // 移除.vue组件、js文件和样式文件的import语句
     for (const imp of imports) {
       if (imp.source.endsWith('.vue') || imp.source.endsWith('.js') || 
           imp.source.endsWith('.css') || imp.source.endsWith('.scss')) {
@@ -898,7 +909,7 @@ class ComponentInliner {
     if (this.inlinedStyles && this.inlinedStyles.length > 0) {
       for (const styleFile of this.inlinedStyles) {
         allStyles.push({
-          content: `/* 📦 来自 ${styleFile.source} 的内联样式 */\n${styleFile.content}`,
+          content: `/* 📦 来自 ${styleFile.source} 的内联样式*/\n${styleFile.content}`,
           scoped: false,
           lang: styleFile.lang
         });
@@ -916,30 +927,30 @@ class ComponentInliner {
    * @returns {string} 处理后的SCSS样式
    */
   processScopedStyleScss(styleContent, classPrefix, rootClassName) {
-    // 智能处理策略：
-    // 1. 根元素类名 (.counter) → 交集选择器 (.counter.prefix)
-    // 2. 其他独立类名 (.count) → 后代选择器 (.counter.prefix .count)
+    // 智能处理策略:
+    // 1. 根元素类�?(.counter) �?交集选择�?(.counter.prefix)
+    // 2. 其他独立类名 (.count) �?后代选择�?(.counter.prefix .count)
     
     const trimmedContent = styleContent.trim();
     if (!trimmedContent) {
       return '';
     }
     
-    // 找到所有根级选择器
+    // 找到所有根级选择�?
     const rootSelectors = this.findRootSelectors(trimmedContent);
     let processedContent = trimmedContent;
     
-    // 处理每个根级选择器
+    // 处理每个根级选择�?
     for (const rootSelector of rootSelectors) {
       const className = rootSelector.substring(1); // 移除点号
       
       if (className === rootClassName) {
-        // 这是组件根元素，使用交集选择器
+        // 这是组件根元素，使用交集选择�?
         const intersectionSelector = `.${className}.${classPrefix}`;
         const rootPattern = new RegExp(`^(\\s*)\\${rootSelector}\\s*\\{`, 'gm');
         processedContent = processedContent.replace(rootPattern, `$1${intersectionSelector} {`);
       } else {
-        // 这是其他元素，使用后代选择器
+        // 这是其他元素，使用后代选择�?
         const descendantSelector = `.${rootClassName}.${classPrefix} ${rootSelector}`;
         const rootPattern = new RegExp(`^(\\s*)\\${rootSelector}\\s*\\{`, 'gm');
         processedContent = processedContent.replace(rootPattern, `$1${descendantSelector} {`);
@@ -950,9 +961,9 @@ class ComponentInliner {
   }
 
   /**
-   * 找到所有根级选择器
+   * 找到所有根级选择�?
    * @param {string} content - SCSS内容
-   * @returns {Array} 根级选择器数组
+   * @returns {Array} 根级选择器数�?
    */
   findRootSelectors(content) {
     const selectors = [];
@@ -960,7 +971,7 @@ class ComponentInliner {
     
     for (const line of lines) {
       const trimmedLine = line.trim();
-      // 匹配行首的类选择器
+      // 匹配行首的类选择�?
       const match = trimmedLine.match(/^(\.[a-zA-Z][\w-]*)\s*\{/);
       if (match) {
         const selector = match[1];
@@ -974,17 +985,17 @@ class ComponentInliner {
   }
 
   /**
-   * 处理同级类名的选择器
-   * @param {string} selector - 原始选择器
+   * 处理同级类名的选择�?
+   * @param {string} selector - 原始选择�?
    * @param {string} classPrefix - 类名前缀
-   * @returns {string} 处理后的选择器
+   * @returns {string} 处理后的选择�?
    */
   processSelectorForSameLevel(selector, classPrefix) {
-    // 处理多个选择器（逗号分隔）
+    // 处理多个选择器（逗号分隔�?
     return selector.split(',').map(sel => {
       const trimmedSel = sel.trim();
       
-      // 如果是类选择器，转换为交集选择器
+      // 如果是类选择器，转换为交集选择�?
       if (trimmedSel.startsWith('.')) {
         const className = trimmedSel.substring(1);
         // .hello -> .hello.helloworld-component
@@ -1004,7 +1015,7 @@ class ComponentInliner {
    * 处理scoped样式，添加组件类名前缀
    * @param {string} styleContent - 样式内容
    * @param {string} classPrefix - 类名前缀
-   * @param {string} rootClassName - 根元素类名
+   * @param {string} rootClassName - 根元素类�?
    * @returns {string} 处理后的样式
    */
   processScopedStyle(styleContent, classPrefix, rootClassName) {
@@ -1038,9 +1049,9 @@ class ComponentInliner {
           return trimmedSel;
         }
         
-        // 分析选择器结构
-        // 例如：.hello -> .helloworld-component.hello （合并类选择器）
-        // 例如：.hello h2 -> .helloworld-component.hello h2 （保持后代关系）
+        // 分析选择器结�?
+        // 例如�?hello -> .helloworld-component.hello （合并类选择器）
+        // 例如�?hello h2 -> .helloworld-component.hello h2 （保持后代关系）
         
         if (trimmedSel.startsWith('.')) {
           // 获取第一个类名
@@ -1050,43 +1061,43 @@ class ComponentInliner {
              const restOfSelector = trimmedSel.substring(firstClass.length);
              
              if (restOfSelector) {
-               // 有后续选择器，判断是伪类还是后代选择器
+               // 有后续选择器，判断是伪类还是后代选择�?
                if (restOfSelector.startsWith(':')) {
-                 // 伪类选择器，例如：.simple-btn:hover -> .simplebutton-component.simple-btn:hover
-                 const className = firstClass.substring(1); // 移除点号，得到类名
+                 // 伪类选择器，例如�?simple-btn:hover -> .simplebutton-component.simple-btn:hover
+                 const className = firstClass.substring(1); // 移除点号，得到类�?
                  if (className === rootClassName) {
-                   // 是根元素类名，合并类选择器 + 伪类
+                   // 是根元素类名，合并类选择�?+ 伪类
                    return `.${classPrefix}${firstClass}${restOfSelector}`;
                  } else {
-                   // 不是根元素类名，使用后代选择器 + 伪类
+                   // 不是根元素类名，使用后代选择�?+ 伪类
                    return `.${classPrefix} ${firstClass}${restOfSelector}`;
                  }
                } else {
-                 // 后代选择器，例如：.counter button -> .counter-component.counter button
+                 // 后代选择器，例如�?counter button -> .counter-component.counter button
                  return `.${classPrefix}${firstClass} ${restOfSelector.trim()}`;
                }
              } else {
                 // 只是单个类选择器，需要判断是否是根元素的类名
-                 const className = firstClass.substring(1); // 移除点号，得到类名
+                 const className = firstClass.substring(1); // 移除点号，得到类�?
                  
                  if (className === rootClassName) {
-                   // 是根元素类名，合并类选择器
-                   // 例如：.hello -> .helloworld-component.hello
+                   // 是根元素类名，合并类选择�?
+                   // 例如�?hello -> .helloworld-component.hello
                    return `.${classPrefix}${firstClass}`;
                  } else {
-                   // 不是根元素类名，使用后代选择器
-                   // 例如：.count -> .counter-component .count
+                   // 不是根元素类名，使用后代选择�?
+                   // 例如�?count -> .counter-component .count
                    return `.${classPrefix} ${firstClass}`;
                  }
              }
            }
         } else if (trimmedSel.match(/^[a-zA-Z]/)) {
-          // 元素选择器，添加类名前缀作为父选择器
+          // 元素选择器，添加类名前缀作为父选择�?
           // 例如：div -> .helloworld-component div
           return `.${classPrefix} ${trimmedSel}`;
         } else if (trimmedSel.startsWith('#')) {
-          // ID选择器，添加类名前缀作为父选择器
-          // 例如：#myid -> .helloworld-component #myid
+          // ID选择器，添加类名前缀作为父选择�?
+          // 例如�?myid -> .helloworld-component #myid
           return `.${classPrefix} ${trimmedSel}`;
         } else {
           // 其他选择器（属性选择器、伪类等），添加类名前缀

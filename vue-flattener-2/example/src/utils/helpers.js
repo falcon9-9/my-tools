@@ -2,6 +2,24 @@
  * 通用辅助工具函数
  */
 
+export const loadScript = (src, prototype) => {
+  if (prototype && window[prototype]) {
+    return new Promise((resolve, reject) => {
+      resolve();
+    });
+  } else {
+    let xScript = document.createElement("script");
+    xScript.async = true;
+    xScript.defer = true;
+    return new Promise((resolve, reject) => {
+      xScript.onload = resolve;
+      xScript.onerror = reject;
+      xScript.src = src;
+      document.body.appendChild(xScript);
+    });
+  }
+};
+
 // 首字母大写
 export function capitalize(str) {
   if (!str) return '';

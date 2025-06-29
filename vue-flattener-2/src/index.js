@@ -7,6 +7,25 @@ const ComponentInliner = require('./inliner/ComponentInliner');
  */
 class VueFlattener {
   /**
+   * 构造函数
+   * @param {Object} options - 配置选项
+   * @param {boolean} options.silent - 是否静默模式，不输出日志
+   */
+  constructor(options = {}) {
+    this.silent = options.silent || false;
+  }
+
+  /**
+   * 日志输出辅助方法
+   * @param {...any} args - 日志参数
+   */
+  log(...args) {
+    if (!this.silent) {
+      console.log(...args);
+    }
+  }
+
+  /**
    * 拍平Vue组件
    * @param {string} inputPath - 输入组件路径
    * @param {string} outputPath - 输出路径
@@ -14,35 +33,35 @@ class VueFlattener {
    */
   async flatten(inputPath, outputPath) {
     try {
-      console.log(`开始拍平组件: ${inputPath}`);
+      this.log(`开始拍平组件: ${inputPath}`);
       
       // 使用组件内联器
-      console.log('🔧 创建ComponentInliner...');
-      const inliner = new ComponentInliner(inputPath);
+      this.log('🔧 创建ComponentInliner...');
+      const inliner = new ComponentInliner(inputPath, { silent: this.silent });
       
-      console.log('🔍 执行内联...');
+      this.log('🔍 执行内联...');
       const result = await inliner.inline();
       
-      console.log('📋 内联结果:');
-      console.log('  - Template长度:', result.template ? result.template.length : 0);
-      console.log('  - Script长度:', result.script ? result.script.length : 0);
-      console.log('  - Styles数量:', result.styles ? result.styles.length : 0);
+      this.log('📋 内联结果:');
+      this.log('  - Template长度:', result.template ? result.template.length : 0);
+      this.log('  - Script长度:', result.script ? result.script.length : 0);
+      this.log('  - Styles数量:', result.styles ? result.styles.length : 0);
       
       // 生成拍平后的组件
-      console.log('📝 生成组件...');
+      this.log('📝 生成组件...');
       const flattenedComponent = this.generateComponent(
         result.template,
         result.script,
         result.styles
       );
       
-      console.log('💾 生成的组件长度:', flattenedComponent.length);
+      this.log('💾 生成的组件长度:', flattenedComponent.length);
       
       // 写入文件
       await fs.ensureDir(path.dirname(outputPath));
       await fs.writeFile(outputPath, flattenedComponent, 'utf-8');
       
-      console.log(`拍平完成! 输出到: ${outputPath}`);
+      this.log(`拍平完成! 输出到: ${outputPath}`);
     } catch (error) {
       console.error('拍平组件时出错:', error);
       throw error;

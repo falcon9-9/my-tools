@@ -1,8 +1,11 @@
 {
   "name": "vue-flattener-2",
   "version": "1.0.0",
-  "description": "Vue component flattener tool with webpack plugin support",
+  "description": "Vue component flattener tool with webpack plugin and CLI support",
   "main": "src/index.js",
+  "bin": {
+    "vue-flatten": "src/cli.js"
+  },
   "exports": {
     ".": "./src/index.js",
     "./webpack-plugin": "./webpack-plugin.js"
@@ -12,9 +15,11 @@
     "install-all": "npm install && cd example && npm install",
     "test": "echo \"Error: no test specified\" && exit 1",
     "link-global": "npm link",
-    "unlink-global": "npm unlink"
+    "unlink-global": "npm unlink",
+    "cli": "node src/cli.js",
+    "flatten": "node src/cli.js"
   },
-  "keywords": ["vue", "flattener", "inline", "webpack", "plugin"],
+  "keywords": ["vue", "flattener", "inline", "webpack", "plugin", "cli"],
   "author": "",
   "license": "ISC",
   "files": [

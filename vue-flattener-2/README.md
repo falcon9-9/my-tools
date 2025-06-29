@@ -42,7 +42,8 @@ module.exports = {
   plugins: [
     // ... 其他插件
     new VueFlattenPlugin({
-      watchDir: path.resolve(__dirname, 'src/views') // 指定要监听的文件夹
+      watchDir: path.resolve(__dirname, 'src/views'),
+      flattenerPath: path.resolve(__dirname, '../vue-flattener-2/src/index.js')
     })
   ]
 };
@@ -206,3 +207,233 @@ npm run unlink-global    # 取消全局链接
 ## 许可证
 
 ISC License 
+
+## 使用方法
+
+### 方法一：作为webpack插件使用（推荐）
+
+#### 通过npm link使用
+
+1. **在本项目中创建全局链接**：
+```bash
+cd vue-flattener-2
+npm link
+```
+
+2. **在目标项目中引用**：
+```bash
+cd your-project
+npm link vue-flattener-2
+```
+
+3. **在webpack配置中使用**：
+```javascript
+const VueFlattenPlugin = require('vue-flattener-2/webpack-plugin');
+
+module.exports = {
+  // ... 其他配置
+  plugins: [
+    new VueFlattenPlugin({
+      watchDir: path.resolve(__dirname, 'src/views'),
+      flattenerPath: path.resolve(__dirname, '../vue-flattener-2/src/index.js')
+    })
+  ]
+};
+```
+
+#### 直接引用（同项目使用）
+
+```javascript
+const VueFlattenPlugin = require('./path/to/vue-flattener-2/webpack-plugin');
+
+module.exports = {
+  plugins: [
+    new VueFlattenPlugin({
+      watchDir: path.resolve(__dirname, 'src/views')
+    })
+  ]
+};
+```
+
+### 方法二：作为命令行工具使用
+
+#### 基本用法
+
+```bash
+# 拍平单个文件
+node src/cli.js input.vue
+
+# 拍平单个文件并指定输出路径
+node src/cli.js input.vue output.vue
+
+# 拍平文件夹中的所有Vue文件
+node src/cli.js src/views
+
+# 递归拍平文件夹及子文件夹
+node src/cli.js src --recursive
+
+# 自定义输出后缀
+node src/cli.js src/views --suffix .flat
+
+# 详细输出模式
+node src/cli.js src/views --verbose
+
+# 排除特定文件
+node src/cli.js src/views --exclude "**/*.test.vue"
+```
+
+#### 配置文件支持
+
+**创建配置文件：**
+```bash
+# 创建 JavaScript 配置文件
+vue-flatten --config
+
+# 创建 JSON 配置文件  
+vue-flatten --config-json
+```
+
+**使用配置文件（零配置模式）：**
+```bash
+# 直接使用配置文件中的设置
+vue-flatten
+
+# 结合命令行选项使用
+vue-flatten --verbose
+```
+
+**配置文件示例：**
+```javascript
+// vue-flatten.config.js
+module.exports = {
+  inputPaths: ['src/views', 'src/pages'],
+  suffix: '.flattened',
+  recursive: true,
+  exclude: ['**/*.test.vue', '**/*.spec.vue'],
+  autoGitignore: true,
+  gitignorePatterns: ['*.flattened.vue', '**/*.flattened.vue']
+};
+```
+
+#### 通过npm脚本使用
+
+在package.json中可以添加脚本：
+
+```json
+{
+  "scripts": {
+    "flatten": "vue-flatten",
+    "flatten:config": "vue-flatten --config",
+    "flatten:views": "node src/cli.js src/views",
+    "flatten:all": "node src/cli.js src --recursive --verbose"
+  }
+}
+```
+
+然后使用：
+```bash
+npm run flatten           # 使用配置文件
+npm run flatten:config    # 创建配置文件
+npm run flatten:views     # 处理指定文件夹
+npm run flatten:all       # 递归处理所有文件
+```
+
+#### CLI选项说明
+
+| 选项 | 简写 | 说明 | 示例 |
+|------|------|------|------|
+| `--output` | `-o` | 指定输出路径 | `--output dist/Demo.vue` |
+| `--recursive` | `-r` | 递归处理子文件夹 | `--recursive` |
+| `--suffix` | | 自定义输出后缀 | `--suffix .flat` |
+| `--exclude` | | 排除文件模式 | `--exclude "**/*.test.vue"` |
+| `--verbose` | `-v` | 详细输出模式 | `--verbose` |
+| `--help` | `-h` | 显示帮助信息 | `--help` |
+| `--config` | | 创建JS配置文件 | `--config` |
+| `--config-json` | | 创建JSON配置文件 | `--config-json` |
+| `--no-gitignore` | | 禁用自动gitignore处理 | `--no-gitignore` |
+
+#### 自动GitIgnore处理
+
+CLI工具会自动将拍平后的文件添加到`.gitignore`中，避免提交生成的文件：
+
+```bash
+# 默认行为：自动添加gitignore规则
+vue-flatten src/views
+
+# 禁用自动gitignore
+vue-flatten src/views --no-gitignore
+
+# 自定义后缀也会自动添加对应规则
+vue-flatten src/views --suffix .inline  # 会添加 *.inline.vue 规则
+```
+
+#### CLI输出示例
+
+**简洁模式（默认）**：
+```
+🚀 Vue组件拍平工具启动
+📁 输入路径: src/views
+📁 文件夹模式: src/views
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📁 发现 3 个Vue文件需要拍平
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Demo.vue -> Demo.flattened.vue
+✅ Home.vue -> Home.flattened.vue
+✅ About.vue -> About.flattened.vue
+
+📊 ========== 拍平完成统计 ==========
+📂 总文件数: 3
+✅ 成功: 3
+❌ 失败: 0
+📈 成功率: 100.0%
+⏱️  总耗时: 45ms (0.04s)
+📊 ====================================
+```
+
+**详细模式（--verbose）**：
+```
+🚀 Vue组件拍平工具启动
+📁 输入路径: src/views/Demo.vue
+🔧 配置选项: {
+  "inputPath": "src/views/Demo.vue",
+  "outputPath": null,
+  "recursive": false,
+  "suffix": ".flattened",
+  "exclude": null,
+  "verbose": true,
+  "help": false
+}
+📄 单文件模式: Demo.vue
+📁 输出路径: src/views/Demo.flattened.vue
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄 正在拍平: src/views/Demo.vue
+开始拍平组件: src/views/Demo.vue
+🔧 创建ComponentInliner...
+🔍 执行内联...
+🔍 分析import语句...
+✅ 发现 2 个import:
+  - default: HelloWorld from ../components/HelloWorld.vue
+  - default: Counter from ../components/Counter.vue
+🔧 开始内联处理..
+📦 处理Vue组件: ../components/HelloWorld.vue
+✅ 成功内联Vue组件: HelloWorld
+📦 处理Vue组件: ../components/Counter.vue
+✅ 成功内联Vue组件: Counter
+📝 更新主组件script...
+✅ Script更新完成，长度: 3133
+🎨 合并样式...
+✅ 样式合并完成，共 5 个样式块
+🎉 内联完成!
+✅ Demo.vue -> Demo.flattened.vue
+   📄 大小: 510 Bytes -> 8.18 KB
+   ⏱️  耗时: 17ms
+   📈 增长: +7.68 KB (+1542.0%)
+
+📊 ========== 拍平完成统计 ==========
+📂 总文件数: 1
+✅ 成功: 1
+❌ 失败: 0
+📈 成功率: 100.0%
+⏱️  总耗时: 26ms (0.03s)
+📊 ====================================
+``` 

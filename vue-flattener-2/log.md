@@ -1711,3 +1711,528 @@ vue-flattener-2/
 - 示例项目库
 
 这次重构标志着Vue组件拍平工具从一个实验性项目成功转型为可生产使用的专业工具，为工具的广泛应用和社区发展奠定了坚实基础。🎉
+
+### 2025-6-28 - CLI命令行工具实现 🚀
+
+**功能扩展：从webpack插件到独立CLI工具**
+
+在webpack插件功能完善的基础上，成功实现了Vue组件拍平的第二种使用方式 - **命令行工具**，为用户提供了更灵活的Vue文件拍平解决方案。
+
+#### 需求背景
+用户希望能够：
+1. **手动控制拍平过程**：不依赖webpack构建流程，独立使用拍平功能
+2. **批量处理能力**：一次性处理多个文件或整个文件夹
+3. **脚本集成支持**：集成到构建脚本、CI/CD流程中
+4. **灵活的输出控制**：支持详细输出和简洁输出两种模式
+
+#### 核心功能设计
+
+**1. 多种处理模式**
+```bash
+# 单文件拍平
+node src/cli.js src/views/Demo.vue
+
+# 文件夹批量拍平  
+node src/cli.js src/views
+
+# 递归子文件夹处理
+node src/cli.js src --recursive
+
+# 排除特定文件
+node src/cli.js src/views --exclude "**/*.test.vue"
+```
+
+**2. 丰富的命令行选项**
+- `--output, -o`：指定输出路径
+- `--recursive, -r`：递归处理子文件夹
+- `--suffix`：自定义输出后缀（默认.flattened）
+- `--exclude`：排除文件模式（glob语法）
+- `--verbose, -v`：详细输出模式
+- `--help, -h`：显示帮助信息
+
+**3. 智能输出控制**
+- **简洁模式**（默认）：只显示关键信息和最终统计
+- **详细模式**（--verbose）：显示完整处理过程、文件大小对比、性能统计
+
+#### 技术实现架构
+
+**1. VueFlattenCLI类设计**
+```javascript
+class VueFlattenCLI {
+  constructor(options = {}) {
+    this.flattener = new VueFlattener({ silent: !options.verbose });
+    this.startTime = Date.now();
+    this.stats = {
+      totalFiles: 0,
+      successFiles: 0,
+      failedFiles: 0,
+      errors: []
+    };
+  }
+}
+```
+
+**2. 参数解析系统**
+```javascript
+parseArgs() {
+  // 支持长选项和短选项
+  // --verbose/-v, --recursive/-r, --output/-o, --help/-h
+  // 智能参数验证和错误提示
+}
+```
+
+**3. 文件发现和过滤**
+```javascript
+async getVueFiles(dirPath, recursive = false, exclude = null) {
+  // 递归扫描文件夹
+  // 自动排除已拍平文件（.flattened.vue）
+  // 支持glob模式的文件排除
+  // 智能路径处理
+}
+```
+
+**4. 批量处理引擎**
+```javascript
+async flattenMultipleFiles(files, options) {
+  // 串行处理确保稳定性
+  // 详细的进度提示
+  // 错误容错处理
+  // 实时统计更新
+}
+```
+
+#### 关键技术突破
+
+**1. 日志控制系统**
+为了实现静默模式，重构了VueFlattener和ComponentInliner的日志系统：
+
+```javascript
+// VueFlattener增加静默选项
+constructor(options = {}) {
+  this.silent = options.silent || false;
+}
+
+log(...args) {
+  if (!this.silent) {
+    console.log(...args);
+  }
+}
+
+// ComponentInliner同步支持
+constructor(mainComponentPath, options = {}) {
+  this.silent = options.silent || false;
+}
+```
+
+遇到的技术难点：
+- **循环调用问题**：`this.log(...args)`中误写成`this.log(...args)`导致无限递归
+- **编码问题**：Windows PowerShell环境下的中文字符显示异常
+- **参数传递**：确保verbose选项正确传递到所有子组件
+
+**2. 编码问题解决**
+在Windows环境下遇到中文字符显示为乱码的问题：
+```
+🎉 内联完成?  // 错误显示
+🎉 内联完成!  // 正确显示
+```
+
+通过创建编码修复脚本，批量修复了所有受影响的中文字符，确保跨平台兼容性。
+
+**3. npm包配置增强**
+```json
+{
+  "bin": {
+    "vue-flatten": "src/cli.js"  // 🆕 全局命令支持
+  },
+  "scripts": {
+    "cli": "node src/cli.js",
+    "flatten": "node src/cli.js"  // 🆕 npm脚本支持
+  }
+}
+```
+
+#### 实际测试验证
+
+**1. 简洁模式输出**
+```
+🚀 Vue组件拍平工具启动
+📁 输入路径: example/src/views
+📁 文件夹模式: example/src/views
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📁 发现 1 个Vue文件需要拍平
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Demo.vue -> Demo.flattened.vue
+
+📊 ========== 拍平完成统计 ==========
+📂 总文件数: 1
+✅ 成功: 1
+❌ 失败: 0
+📈 成功率: 100.0%
+⏱️  总耗时: 19ms (0.02s)
+📊 ====================================
+```
+
+**2. 详细模式输出**
+```bash
+🔄 正在拍平: example/src/views/Demo.vue
+开始拍平组件: example/src/views/Demo.vue
+🔧 创建ComponentInliner...
+🔍 执行内联...
+🔍 分析import语句...
+✅ 发现 2 个import:
+  - default: HelloWorld from ../components/HelloWorld.vue
+  - default: Counter from ../components/Counter.vue
+🔧 开始内联处理..
+📦 处理Vue组件: ../components/HelloWorld.vue
+✅ 成功内联Vue组件: HelloWorld
+📦 处理Vue组件: ../components/Counter.vue
+🔧 递归内联JS文件: ../utils/math.js
+🔧 递归内联JS文件: ../utils/helpers.js
+🎨 递归处理样式文件: ../styles/theme.css
+🔍 发现 1 个@import语句
+📥 内联@import文件: ./base.css
+✅ 成功内联@import: ./base.css
+✅ 成功递归内联样式文件: ../styles/theme.css
+✅ 成功内联Vue组件: Counter
+📝 更新主组件script...
+✅ Script更新完成，长度: 3133
+🎨 合并样式...
+✅ 样式合并完成，共 5 个样式块
+🎉 内联完成!
+📋 内联结果:
+  - Template长度: 110
+  - Script长度: 3133
+  - Styles数量: 5
+📝 生成组件...
+💾 生成的组件长度: 8003
+拍平完成! 输出到: example\src\views\Demo.flattened.vue
+✅ Demo.vue -> Demo.flattened.vue
+   📄 大小: 510 Bytes -> 8.18 KB
+   ⏱️  耗时: 17ms
+   📈 增长: +7.68 KB (+1542.0%)
+```
+
+**3. 功能验证测试**
+```bash
+# 单文件处理 ✅
+node src/cli.js example/src/views/Demo.vue
+
+# 自定义后缀 ✅
+node src/cli.js example/src/views/Demo.vue --suffix .flat
+
+# 递归批量处理 ✅
+node src/cli.js example/src --recursive
+# 📁 发现 6 个Vue文件需要拍平
+
+# npm脚本集成 ✅
+npm run flatten example/src/views/Demo.vue --verbose
+```
+
+#### 用户体验设计
+
+**1. 友好的界面设计**
+- 🎨 丰富的emoji图标增强视觉体验
+- 📊 清晰的分隔线和格式化输出
+- 🔄 实时进度提示
+- 📈 详细的统计报告
+
+**2. 专业的错误处理**
+```bash
+❌ 输入路径不存在: src/nonexistent.vue
+❌ Demo.vue: Maximum call stack size exceeded
+   详细错误: ReferenceError: Maximum call stack size exceeded
+```
+
+**3. 智能默认值**
+- 默认后缀：`.flattened`
+- 自动跳过已拍平文件
+- 智能路径解析和生成
+- 合理的错误恢复机制
+
+#### 技术亮点总结
+
+**1. 架构设计**
+- **模块化设计**：清晰的类结构和职责分离
+- **可扩展性**：易于添加新的命令行选项和功能
+- **复用性**：充分复用现有的VueFlattener核心功能
+
+**2. 用户体验**
+- **渐进式信息披露**：简洁模式满足日常使用，详细模式支持调试
+- **智能默认值**：减少用户配置负担
+- **清晰的反馈**：及时的进度提示和详细的结果报告
+
+**3. 错误处理**
+- **优雅降级**：单文件失败不影响其他文件处理
+- **详细诊断**：verbose模式提供完整的错误堆栈
+- **用户友好**：清晰的错误信息和解决建议
+
+**4. 性能统计**
+- **文件大小分析**：自动计算和显示文件大小变化
+- **处理时间统计**：精确的耗时统计和成功率分析
+- **批量操作优化**：合理的串行处理策略
+
+#### 使用方式对比
+
+| 特性 | webpack插件 | CLI工具 |
+|------|-------------|---------|
+| **自动化程度** | 高（自动监听） | 低（手动执行） |
+| **集成性** | 完全集成到构建流程 | 独立使用 |
+| **灵活性** | 中等（配置受限） | 高（丰富选项） |
+| **批量处理** | 实时处理变化文件 | 一次性批量处理 |
+| **调试支持** | 有限 | 详细（verbose模式） |
+| **适用场景** | 开发环境实时拍平 | 构建脚本、CI/CD |
+| **输出控制** | 固定格式 | 可配置（简洁/详细） |
+| **错误处理** | 构建流程一部分 | 独立错误报告 |
+
+#### 最佳实践建议
+
+**1. 开发阶段**：使用webpack插件进行实时拍平
+```javascript
+// webpack.config.js
+new VueFlattenPlugin({
+  watchDir: path.resolve(__dirname, 'src/views')
+})
+```
+
+**2. 构建阶段**：使用CLI工具进行批量处理
+```bash
+# package.json
+"scripts": {
+  "flatten": "node ../vue-flattener-2/src/cli.js src/views",
+  "flatten-all": "node ../vue-flattener-2/src/cli.js src --recursive"
+}
+```
+
+**3. CI/CD集成**：结合脚本进行自动化处理
+```bash
+# 构建前拍平指定文件
+npm run flatten && npm run build
+```
+
+#### 文档完善
+
+**1. README.md增强**
+- 新增CLI工具完整使用说明
+- 详细的选项说明表格
+- 丰富的示例代码
+- 输出格式展示
+
+**2. USAGE.md扩展**
+- CLI工具详细使用指南
+- 常见错误和解决方案
+- 性能优化建议
+- 与webpack插件的使用对比
+
+#### 学习价值总结
+
+**1. CLI工具设计**
+- **参数解析**：如何设计直观易用的命令行接口
+- **用户体验**：通过视觉设计提升工具的专业性
+- **错误处理**：用户友好的错误信息设计
+
+**2. 日志系统设计**
+- **分级输出**：简洁模式与详细模式的平衡
+- **静默机制**：如何在复杂的调用链中传递静默选项
+- **调试支持**：详细日志对工具调试的重要性
+
+**3. 软件工程实践**
+- **功能复用**：如何在现有架构基础上扩展新功能
+- **向后兼容**：确保新功能不影响现有功能
+- **测试验证**：通过实际使用验证功能的正确性
+
+**4. 工具链思维**
+- **多场景支持**：一个工具适配不同的使用场景
+- **生态集成**：如何融入现有的开发工具链
+- **用户选择**：为用户提供多种使用方式的价值
+
+#### 项目能力完整性
+
+Vue组件拍平工具现在具备完整的使用方式：
+
+**核心功能：**
+- ✅ Vue组件内联（支持递归嵌套）
+- ✅ JavaScript工具函数内联  
+- ✅ 外部CSS/SCSS样式文件内联
+- ✅ @import语句的嵌套导入处理
+- ✅ CSS样式隔离和作用域处理
+- ✅ CSS伪类选择器正确转换
+
+**使用方式：**
+- ✅ **方式一**：webpack插件（开发环境实时拍平）
+- ✅ **方式二**：CLI命令行工具（批量处理、脚本集成）
+
+**支持特性：**
+- ✅ npm link支持（跨项目复用）
+- ✅ 详细的配置选项
+- ✅ 完善的错误处理
+- ✅ 专业的文档体系
+
+#### 下一步发展方向
+
+**1. 功能增强**
+- TypeScript文件内联支持
+- CSS优化和压缩选项
+- 第三方库选择性内联
+- 配置文件支持（vue-flatten.config.js）
+
+**2. 生态完善**
+- Vue CLI插件版本
+- Vite插件支持
+- VS Code扩展开发
+- GitHub Actions集成
+
+**3. 用户体验**
+- 可视化配置界面
+- 拍平结果预览
+- 性能分析报告
+- 拍平历史记录
+
+**4. 社区建设**
+- npm registry发布
+- 贡献者指南
+- 示例项目库
+- 用户反馈系统
+
+这次CLI工具的成功实现，标志着Vue组件拍平工具从单一的webpack插件发展为功能完善的工具套件，既能满足开发环境的实时需求，也能适应构建和部署场景的批量处理需求。工具的专业性、易用性和可扩展性都得到了显著提升。🎉
+
+### 2025-6-28 - CLI工具文档完善与配置文件支持 📚
+
+**文档完善背景：**
+随着CLI工具功能的不断完善，特别是配置文件支持和自动GitIgnore处理功能的添加，需要更新项目文档以反映最新的功能特性和使用方式。
+
+#### 主要更新内容
+
+**1. USAGE.md 文档增强**
+- **配置文件支持章节**：新增2.4节，详细介绍配置文件的创建和使用
+- **高级选项扩展**：更新选项表格，添加`--config`、`--config-json`、`--no-gitignore`等新选项
+- **npm脚本优化**：更新脚本示例，推荐使用`vue-flatten`命令替代长路径
+- **GitIgnore自动处理**：新增2.8节，说明自动gitignore功能的使用和配置
+
+**2. README.md 主文档更新**
+- **配置文件支持**：在方法二中新增配置文件使用示例
+- **零配置模式**：介绍通过配置文件实现的零配置使用方式
+- **选项表格完善**：添加所有最新的CLI选项说明
+- **实用示例增加**：提供更多实际使用场景的命令示例
+
+#### 新增功能文档化
+
+**1. 配置文件支持**
+```javascript
+// vue-flatten.config.js 示例
+module.exports = {
+  inputPaths: ['src/views', 'src/pages'],  // 🆕 多路径支持
+  suffix: '.flattened',
+  recursive: true,
+  exclude: ['**/*.test.vue', '**/*.spec.vue'],
+  autoGitignore: true,  // 🆕 自动gitignore
+  gitignorePatterns: ['*.flattened.vue', '**/*.flattened.vue']  // 🆕 自定义规则
+};
+```
+
+**2. 零配置模式使用**
+```bash
+# 创建配置文件
+vue-flatten --config
+
+# 零配置使用
+vue-flatten  # 自动读取配置文件
+```
+
+**3. 自动GitIgnore处理**
+```bash
+# 自动添加gitignore规则
+vue-flatten src/views
+
+# 禁用自动处理
+vue-flatten src/views --no-gitignore
+
+# 自定义后缀也会自动处理
+vue-flatten src/views --suffix .inline
+```
+
+#### 文档结构优化
+
+**1. 层次结构改进**
+- 将原来的2.4-2.6重新编号为2.5-2.7
+- 新增2.4配置文件支持和2.8 GitIgnore处理
+- 保持逻辑流程的自然性：基础用法 → 配置文件 → 高级选项 → 实际应用
+
+**2. 内容组织优化**
+- **由简到繁**：从简单命令开始，逐步介绍高级功能
+- **实用性导向**：优先展示最常用的功能和配置
+- **完整性考虑**：确保所有功能都有对应的文档说明
+
+**3. 示例代码更新**
+- **现代化命令**：推荐使用`vue-flatten`而不是长路径调用
+- **实际场景**：提供更贴近实际使用的示例
+- **最佳实践**：体现推荐的使用方式和配置
+
+#### 用户体验提升
+
+**1. 快速上手支持**
+- 突出零配置模式，降低新用户的学习门槛
+- 提供完整的配置文件示例，便于复制使用
+- 明确区分基础用法和高级功能
+
+**2. 功能发现性**
+- 通过表格形式清晰展示所有可用选项
+- 为每个功能提供具体的使用示例
+- 突出新功能特性（配置文件、自动gitignore）
+
+**3. 维护友好性**
+- 统一的文档格式和风格
+- 清晰的版本功能对应关系
+- 便于后续功能扩展的文档结构
+
+#### 技术要点总结
+
+**1. 文档工程化**
+- **一致性**：保持README.md和USAGE.md的内容同步
+- **完整性**：确保所有功能都有对应的文档覆盖
+- **可维护性**：采用模块化的文档结构，便于局部更新
+
+**2. 用户导向设计**
+- **场景驱动**：根据实际使用场景组织文档内容
+- **渐进式学习**：从基础到高级的自然学习路径
+- **实用性优先**：重点突出最常用和最有价值的功能
+
+**3. 信息架构**
+- **逻辑分层**：基础概念 → 具体操作 → 高级配置 → 最佳实践
+- **交叉引用**：在不同章节间建立合理的引用关系
+- **版本控制**：记录功能演进过程，便于用户理解工具发展
+
+#### 更新价值
+
+**1. 降低使用门槛**
+- 配置文件支持让复杂配置变得简单
+- 零配置模式让新用户快速上手
+- 自动gitignore减少了手动配置工作
+
+**2. 提升工具专业性**
+- 完善的文档体现工具的成熟度
+- 详细的功能说明增强用户信心
+- 最佳实践指导提升使用效果
+
+**3. 促进功能采用**
+- 清晰的文档有助于功能推广
+- 完整的示例降低学习成本
+- 实用的配置模板便于快速应用
+
+#### 后续文档规划
+
+**1. 进阶指南**
+- 性能优化建议
+- 复杂项目集成方案
+- 故障排除指南
+
+**2. API文档**
+- 编程式API详细说明
+- 插件开发指南
+- 扩展功能文档
+
+**3. 社区文档**
+- 贡献者指南
+- 开发环境搭建
+- 发布流程说明
+
+这次文档更新确保了工具的功能完整性和文档的专业性保持同步，为用户提供了清晰、完整、实用的使用指南。文档质量的提升将直接促进工具的采用和推广，体现了文档在软件工程中的重要价值。📚✨
