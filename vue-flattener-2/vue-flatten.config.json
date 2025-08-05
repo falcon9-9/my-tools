@@ -1,0 +1,16 @@
+{
+  "inputPaths": [
+    "src/views/Test.vue"
+  ],
+  "suffix": ".flattened",
+  "recursive": true,
+  "exclude": [
+    "**/*.test.vue",
+    "**/*.spec.vue"
+  ],
+  "autoGitignore": true,
+  "gitignorePatterns": [
+    "*.flattened.vue",
+    "**/*.flattened.vue"
+  ]
+}

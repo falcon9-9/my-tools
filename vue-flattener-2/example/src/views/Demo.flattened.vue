@@ -1,8 +1,8 @@
 <template>
   <div class="demo">
-        <HelloWorld msg="欢迎使用Vue组件拍平工具!" />
-        <Counter />
-      </div>
+          <HelloWorld msg="欢迎使用Vue组件拍平工具！@import功能已实现" />
+          <Counter />
+        </div>
 </template>
 
 <script>
@@ -203,6 +203,7 @@
 </style>
 
 <style lang="scss">
+  @import '../styles/animations.scss';
   .counter.counter-component {
     display: inline-flex;
     align-items: center;
@@ -236,8 +237,71 @@
 </style>
 
 <style lang="css">
-  /* 📦 来自 ../styles/theme.css 的内联样式 */
+  /* 📦 来自 ../styles/theme.css 的内联样式*/
   /* 主题样式文件 - theme.css */
+  
+  /* 📦 来自 ./base.css 的内联样式*/
+  /* 基础样式文件 - base.css */
+  /* 这个文件将被其他样式文件通过@import导入 */
+  
+  /* 重置样式 */
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* 基础排版 */
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f8f9fa;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    margin-bottom: 0.5em;
+    font-weight: 600;
+  }
+  
+  p {
+    margin-bottom: 1em;
+  }
+  
+  /* 基础链接样式 */
+  a {
+    color: #3498db;
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+  
+  a:hover {
+    color: #2980b9;
+    text-decoration: underline;
+  }
+  
+  /* 基础列表样式 */
+  ul, ol {
+    margin-left: 2em;
+    margin-bottom: 1em;
+  }
+  
+  /* 基础表单样式 */
+  input, textarea, select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  } 
+  /* 📦 结束来自 ./base.css 的样式*/
   
   /* 基础颜色变量 */
   :root {
@@ -295,97 +359,5 @@
     font-size: 1.5em;
     font-weight: 600;
     margin-bottom: 8px;
-  } 
-</style>
-
-<style lang="scss">
-  /* 📦 来自 ../styles/animations.scss 的内联样式 */
-  // 动画样式文件 - animations.scss
-  
-  // SCSS变量
-  $animation-speed: 0.3s;
-  $bounce-height: 10px;
-  $fade-opacity: 0.7;
-  
-  // 动画关键帧
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  @keyframes bounce {
-    0%, 20%, 60%, 100% {
-      transform: translateY(0);
-    }
-    40% {
-      transform: translateY(-$bounce-height);
-    }
-    80% {
-      transform: translateY(-5px);
-    }
-  }
-  
-  @keyframes pulse {
-    0% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.05);
-    }
-    100% {
-      transform: scale(1);
-    }
-  }
-  
-  // 动画工具类
-  .animate-fade-in {
-    animation: fadeIn $animation-speed ease-out;
-  }
-  
-  .animate-bounce {
-    animation: bounce 1s infinite;
-  }
-  
-  .animate-pulse {
-    animation: pulse 2s infinite;
-  }
-  
-  // 悬停动画
-  .hover-lift {
-    transition: transform $animation-speed ease;
-    
-    &:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-  }
-  
-  .hover-fade {
-    transition: opacity $animation-speed ease;
-    
-    &:hover {
-      opacity: $fade-opacity;
-    }
-  }
-  
-  // 加载动画
-  .loading-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #3498db;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
   } 
 </style>

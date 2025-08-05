@@ -1,0 +1,60 @@
+// SCSS Mixins文件 - mixins.scss
+// 这个文件将被其他样式文件通过@import导入
+
+@import './variables.scss';
+
+// 按钮mixin
+@mixin button-style($bg-color: $primary-color, $text-color: white) {
+  background-color: $bg-color;
+  color: $text-color;
+  border: none;
+  border-radius: $border-radius;
+  padding: $padding-base;
+  cursor: pointer;
+  font-size: $font-size-base;
+  transition: all $transition-speed ease;
+  box-shadow: $box-shadow-light;
+  
+  &:hover {
+    transform: $hover-transform;
+    box-shadow: $box-shadow-medium;
+  }
+}
+
+// 卡片mixin
+@mixin card-style() {
+  background-color: $bg-color;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  padding: $padding-base;
+  margin: $margin-base 0;
+  color: $text-color;
+  box-shadow: $box-shadow-light;
+}
+
+// 居中mixin
+@mixin center-flex() {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+// 省略号文本mixin
+@mixin text-ellipsis() {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// 响应式mixin
+@mixin mobile() {
+  @media screen and (max-width: 768px) {
+    @content;
+  }
+}
+
+@mixin tablet() {
+  @media screen and (min-width: 769px) and (max-width: 1024px) {
+    @content;
+  }
+} 

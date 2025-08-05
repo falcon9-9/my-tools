@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <!-- <h1>Vue组件拍平测试</h1> -->
+    <h1>Vue组件拍平测试</h1>
     <div class="container">
       <div class="panel">
         <h3>原始组件（引入子组件）</h3>

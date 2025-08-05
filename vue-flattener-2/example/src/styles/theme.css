@@ -1,5 +1,7 @@
 /* 主题样式文件 - theme.css */
 
+@import './base.css';
+
 /* 基础颜色变量 */
 :root {
   --primary-color: #3498db;

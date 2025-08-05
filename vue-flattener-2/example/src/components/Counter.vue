@@ -16,7 +16,6 @@
 import { add, multiply, formatNumber, square } from '../utils/math.js'
 import { capitalize, generateId, formatDate } from '../utils/helpers.js'
 import '../styles/theme.css'
-import '../styles/animations.scss'
 
 export default {
   name: 'Counter',
@@ -54,6 +53,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import '../styles/animations.scss';
 .counter {
   display: inline-flex;
   align-items: center;

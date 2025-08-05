@@ -1,0 +1,5 @@
+
+
+# ========== Vue拍平工具自动生成 ==========
+*.flattened.vue
+**/*.flattened.vue

@@ -2,13 +2,31 @@
  * 通用辅助工具函数
  */
 
+export const loadScript = (src, prototype) => {
+  if (prototype && window[prototype]) {
+    return new Promise((resolve, reject) => {
+      resolve();
+    });
+  } else {
+    let xScript = document.createElement("script");
+    xScript.async = true;
+    xScript.defer = true;
+    return new Promise((resolve, reject) => {
+      xScript.onload = resolve;
+      xScript.onerror = reject;
+      xScript.src = src;
+      document.body.appendChild(xScript);
+    });
+  }
+};
+
 // 首字母大写
 export function capitalize(str) {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// 生成随机ID
+// 生成随机ID 1
 export function generateId() {
   return 'id_' + Math.random().toString(36).substr(2, 9);
 }

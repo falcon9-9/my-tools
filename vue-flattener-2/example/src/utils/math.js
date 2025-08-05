@@ -7,6 +7,12 @@ export function add(a, b) {
   return a + b;
 }
 
+export const arrowFunction = () => {
+  console.log('arrowFunction');
+};
+
+export const variable = {};
+
 // 乘法函数
 export function multiply(a, b) {
   return a * b;

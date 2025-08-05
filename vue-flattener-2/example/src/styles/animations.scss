@@ -1,6 +1,9 @@
 // 动画样式文件 - animations.scss
 
-// SCSS变量
+@import './variables.scss';
+@import './mixins.scss';
+
+// SCSS变量（这些现在来自variables.scss）
 $animation-speed: 0.3s;
 $bounce-height: 10px;
 $fade-opacity: 0.7;
